@@ -7,6 +7,7 @@ export const getMembers = async (): Promise<Member[]> => {
     .select('*')
     .order('name', { ascending: true });
 
+  console.log('getMembers data:', data);
   if (error) {
     console.error('Error fetching members:', error);
     return [];

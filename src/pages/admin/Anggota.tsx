@@ -28,10 +28,13 @@ export const Anggota: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const fetchMembers = async () => {
+    console.log('Fetching members in Anggota component...');
     const data = await getMembers();
+    console.log('Members data received:', data);
     setMembers(data);
     
     const existingDivisions = Array.from(new Set(data.map(m => m.divisi)));
+    console.log('Existing divisions from data:', existingDivisions);
     setDivisions(prev => Array.from(new Set([...prev, ...existingDivisions])));
   };
 
