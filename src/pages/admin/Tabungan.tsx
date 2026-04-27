@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { Wallet, Plus, Minus, FileText, Search } from 'lucide-react';
+import { Wallet, Plus, Minus, FileText, Search, Pencil, Trash2, Calendar } from 'lucide-react';
 import { getMembers } from '../../services/memberService';
-import { getTransactions, addTransaction } from '../../services/transactionService';
+import { getTransactions, addTransaction, deleteTransaction, updateTransaction } from '../../services/transactionService';
 import type { Member } from '../../types/member';
 import type { Transaction } from '../../types/transaction';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import clsx from 'clsx';
+import { toast } from 'sonner';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 
 export const Tabungan: React.FC = () => {
   const [isInputModalOpen, setIsInputModalOpen] = useState(false);
@@ -21,6 +23,13 @@ export const Tabungan: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDivision, setSelectedDivision] = useState('Semua');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: string; amount: number; memberName: string }>({
+    isOpen: false,
+    id: '',
+    amount: 0,
+    memberName: ''
+  });
 
   const [formData, setFormData] = useState({
     type: 'setoran' as 'setoran' | 'penarikan',
@@ -71,7 +80,7 @@ export const Tabungan: React.FC = () => {
     const filtered = getFilteredTransactions();
 
     if (filtered.length === 0) {
-      alert('Tidak ada transaksi untuk diunduh pada rentang waktu ini.');
+      toast.error('Tidak ada transaksi untuk diunduh');
       return;
     }
 
@@ -107,6 +116,7 @@ export const Tabungan: React.FC = () => {
     });
 
     doc.save(`Riwayat_Transaksi_SIMANTAB_${startDate}_to_${endDate}.pdf`);
+    toast.success('Riwayat transaksi PDF berhasil diunduh');
   };
 
   const downloadMemberSavingsPDF = () => {
@@ -115,7 +125,7 @@ export const Tabungan: React.FC = () => {
       .sort((a, b) => (b.totalBalance || 0) - (a.totalBalance || 0));
 
     if (activeMembers.length === 0) {
-      alert('Tidak ada data saldo anggota untuk diunduh.');
+      toast.error('Tidak ada data saldo anggota untuk diunduh');
       return;
     }
 
@@ -153,6 +163,7 @@ export const Tabungan: React.FC = () => {
     });
 
     doc.save(`Total_Tabungan_Anggota_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success('Laporan tabungan PDF berhasil diunduh');
   };
 
   const getMemberHistory = (memberId: string) => {
@@ -162,6 +173,42 @@ export const Tabungan: React.FC = () => {
   };
 
   const selectedMember = members.find(m => m.id === selectedMemberId);
+
+  const handleEdit = (tx: Transaction) => {
+    setEditingId(tx.id);
+    setFormData({
+      type: tx.type as 'setoran' | 'penarikan',
+      memberId: tx.member_id,
+      nominal: tx.amount.toString(),
+      note: tx.note || ''
+    });
+    setIsInputModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    const { id } = deleteConfirm;
+    setDeleteConfirm(prev => ({ ...prev, isOpen: false }));
+    
+    const promise = deleteTransaction(id);
+
+    toast.promise(promise, {
+      loading: 'Menghapus transaksi...',
+      success: () => {
+        fetchData();
+        return 'Transaksi berhasil dihapus';
+      },
+      error: 'Gagal menghapus transaksi'
+    });
+  };
+
+  const handleDelete = (tx: Transaction) => {
+    setDeleteConfirm({
+      isOpen: true,
+      id: tx.id,
+      amount: tx.amount,
+      memberName: tx.member?.name || 'Unknown'
+    });
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -177,23 +224,37 @@ export const Tabungan: React.FC = () => {
 
     setIsSubmitting(true);
     
-    const success = await addTransaction({
-      member_id: formData.memberId,
-      type: formData.type as 'setoran' | 'penarikan',
-      amount: Number(formData.nominal),
-      date: new Date().toISOString().split('T')[0],
-      status: 'approved', // Manual input by admin is automatically approved
-      proof_url: '',
-    });
+    const promise = editingId 
+      ? updateTransaction(editingId, {
+          member_id: formData.memberId,
+          type: formData.type as 'setoran' | 'penarikan',
+          amount: Number(formData.nominal),
+          note: formData.note
+        })
+      : addTransaction({
+          member_id: formData.memberId,
+          type: formData.type as 'setoran' | 'penarikan',
+          amount: Number(formData.nominal),
+          date: new Date().toISOString().split('T')[0],
+          status: 'approved', // Manual input by admin is automatically approved
+          proof_url: '',
+          note: formData.note
+        });
 
-    if (success) {
-      alert('Transaksi manual berhasil disimpan!');
-      setIsInputModalOpen(false);
-      setFormData({ type: 'setoran', memberId: '', nominal: '', note: '' });
-      await fetchData(); // Refresh data
-    } else {
-      alert('Gagal menyimpan transaksi.');
-    }
+    toast.promise(promise, {
+      loading: 'Menyimpan transaksi...',
+      success: (res) => {
+        if (res) {
+          setIsInputModalOpen(false);
+          setEditingId(null);
+          setFormData({ type: 'setoran', memberId: '', nominal: '', note: '' });
+          fetchData();
+          return editingId ? 'Transaksi berhasil diperbarui' : 'Transaksi berhasil disimpan';
+        }
+        throw new Error('Gagal menyimpan');
+      },
+      error: 'Terjadi kesalahan sistem'
+    });
     
     setIsSubmitting(false);
   };
@@ -220,52 +281,54 @@ export const Tabungan: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Box */}
-      <div className="bg-white p-3 md:p-4 border-b border-gray-200 rounded-md shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-800 leading-tight">Manajemen Tabungan</h2>
-        <p className="text-xs text-gray-500 mt-0.5">Kelola saldo, setoran, dan penarikan anggota</p>
+      <div className="bg-white p-3 md:p-4 border-b border-gray-200 rounded-xl shadow-sm">
+        <h2 className="text-base md:text-lg font-semibold text-gray-800 leading-tight">Manajemen Tabungan</h2>
+        <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">Kelola saldo, setoran, dan penarikan anggota</p>
       </div>
 
       <div className="flex justify-start gap-2">
         <Button 
           onClick={() => {
-            setFormData(prev => ({ ...prev, type: 'setoran' }));
+            setEditingId(null);
+            setFormData(prev => ({ ...prev, type: 'setoran', memberId: '', nominal: '', note: '' }));
             setIsInputModalOpen(true);
           }}
           variant="outline" 
           size="sm" 
-          className="gap-1.5 text-xs font-semibold px-4 py-2 border-gray-200 rounded-md text-blue-700 bg-white shadow-sm hover:bg-blue-50 transition-all active:scale-95"
+          className="flex-1 md:flex-none gap-1.5 text-[11px] md:text-xs font-semibold px-4 py-2 border-gray-200 rounded-md text-blue-700 bg-white shadow-sm hover:bg-blue-50 transition-all active:scale-95 h-9 md:h-10"
         >
-          <Plus size={14} /> Tambah Transaksi
+          <Plus size={14} /> <span className="hidden xs:inline">Tambah</span> Transaksi
         </Button>
         <Button 
           onClick={() => {
-            setFormData(prev => ({ ...prev, type: 'penarikan' }));
+            setEditingId(null);
+            setFormData(prev => ({ ...prev, type: 'penarikan', memberId: '', nominal: '', note: '' }));
             setIsInputModalOpen(true);
           }}
           variant="outline" 
           size="sm" 
-          className="gap-1.5 text-xs font-semibold px-4 py-2 border-gray-200 rounded-md text-red-700 bg-white shadow-sm hover:bg-red-50 transition-all active:scale-95"
+          className="flex-1 md:flex-none gap-1.5 text-[11px] md:text-xs font-semibold px-4 py-2 border-gray-200 rounded-md text-red-700 bg-white shadow-sm hover:bg-red-50 transition-all active:scale-95 h-9 md:h-10"
         >
-          <Minus size={14} /> Penarikan Dana
+          <Minus size={14} /> <span className="hidden xs:inline">Penarikan</span> Dana
         </Button>
       </div>
 
       {/* Main Balance Card (Minimalist Highlight) */}
-      <div className="p-4 bg-gradient-to-r from-red-700 to-red-900 text-white shadow-sm rounded-md overflow-hidden relative border border-red-700/10">
+      <div className="p-4 md:p-5 bg-gradient-to-r from-red-700 to-red-900 text-white shadow-sm rounded-xl overflow-hidden relative border border-red-700/10">
         <div className="relative z-10">
-          <p className="text-white/80 text-xs font-bold uppercase tracking-[0.1em] mb-1">Total Saldo Tabungan</p>
-          <h2 className="text-2xl font-bold leading-none">{formatCurrency(totalBalance)}</h2>
+          <p className="text-white/80 text-[10px] md:text-xs font-bold uppercase tracking-[0.1em] mb-1">Total Saldo Tabungan</p>
+          <h2 className="text-xl md:text-2xl font-bold leading-none">{formatCurrency(totalBalance)}</h2>
         </div>
-        <div className="absolute top-0 right-0 p-5 opacity-10">
-          <Wallet size={60} />
+        <div className="absolute top-0 right-0 p-4 md:p-5 opacity-10">
+          <Wallet size={48} className="md:size-[60px]" />
         </div>
       </div>
 
       {/* Daily Summary Cards */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="p-3 bg-green-50 border border-green-100 rounded-md shadow-sm">
-          <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider mb-1">Uang Masuk Hari Ini</p>
-          <h3 className="text-lg font-bold text-green-700 leading-none">
+      <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
+        <div className="p-3 bg-green-50 border border-green-100 rounded-xl shadow-sm">
+          <p className="text-[9px] md:text-[10px] font-bold text-green-600 uppercase tracking-wider mb-1">Uang Masuk Hari Ini</p>
+          <h3 className="text-base md:text-lg font-bold text-green-700 leading-none">
             {formatCurrency(
               transactions
                 .filter(t => t.type === 'setoran' && t.status === 'approved' && t.date === new Date().toISOString().split('T')[0])
@@ -273,9 +336,9 @@ export const Tabungan: React.FC = () => {
             )}
           </h3>
         </div>
-        <div className="p-3 bg-red-50 border border-red-100 rounded-md shadow-sm">
-          <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-1">Uang Keluar Hari Ini</p>
-          <h3 className="text-lg font-bold text-red-700 leading-none">
+        <div className="p-3 bg-red-50 border border-red-100 rounded-xl shadow-sm">
+          <p className="text-[9px] md:text-[10px] font-bold text-red-600 uppercase tracking-wider mb-1">Uang Keluar Hari Ini</p>
+          <h3 className="text-base md:text-lg font-bold text-red-700 leading-none">
             {formatCurrency(
               transactions
                 .filter(t => t.type === 'penarikan' && t.status === 'approved' && t.date === new Date().toISOString().split('T')[0])
@@ -287,8 +350,8 @@ export const Tabungan: React.FC = () => {
 
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Transactions Table */}
-        <div className="bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden">
+        {/* Recent Transactions Table / Card List */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/30">
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Riwayat Transaksi</h3>
             <button 
@@ -298,48 +361,109 @@ export const Tabungan: React.FC = () => {
               Lihat Semua
             </button>
           </div>
-          <div className="overflow-x-auto">
+
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="text-gray-400 text-[10px] uppercase tracking-wider border-b border-gray-100 font-bold bg-white">
-                  <th className="px-4 py-2.5">Nama</th>
-                  <th className="px-4 py-2.5">Tanggal</th>
-                  <th className="px-4 py-2.5 text-right">Nominal</th>
+                <tr className="bg-gray-50/50 text-gray-400 text-xs border-b border-gray-100">
+                  <th className="px-6 py-3 font-bold">Nama</th>
+                  <th className="px-6 py-3 font-bold">Tanggal</th>
+                  <th className="px-6 py-3 font-bold text-right">Nominal</th>
+                  <th className="px-6 py-3 font-bold text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="text-sm divide-y divide-gray-50">
                 {transactions.length > 0 ? transactions.slice(0, 10).map((tx) => (
                   <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3">
+                    <td className="px-6 py-4">
                       <button 
                         onClick={() => setSelectedMemberId(tx.member_id)}
-                        className="font-semibold text-gray-800 text-[13px] hover:text-red-700 hover:underline text-left"
+                        className="font-bold text-gray-800 text-sm hover:text-red-700 hover:underline text-left"
                       >
                         {tx.member?.name || 'Unknown'}
                       </button>
-                      <p className={clsx("text-[10px] font-bold uppercase", tx.type === 'setoran' ? "text-green-600" : "text-red-600")}>
+                      <div className={clsx("text-[10px] font-bold uppercase mt-0.5", tx.type === 'setoran' ? "text-green-600" : "text-red-600")}>
                         {tx.type}
-                      </p>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">
-                      {new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-xs text-gray-700">
+                        <Calendar size={12} className="text-red-700" />
+                        <span>{new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                      </div>
                     </td>
-                    <td className={clsx("px-4 py-3 font-bold text-right text-[13px]", tx.type === 'setoran' ? "text-gray-900" : "text-red-600")}>
+                    <td className={clsx("px-6 py-4 font-bold text-right text-sm", tx.type === 'setoran' ? "text-gray-900" : "text-red-600")}>
                       {tx.type === 'penarikan' ? '-' : ''}{formatCurrency(tx.amount).replace('Rp', '').trim()}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-1">
+                        <button 
+                          onClick={() => handleEdit(tx)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Edit Transaksi"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(tx)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Hapus Transaksi"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={3} className="px-4 py-8 text-center text-gray-400 text-xs italic">Belum ada transaksi</td>
+                    <td colSpan={4} className="px-4 py-8 text-center text-gray-400 text-xs italic">Belum ada transaksi</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Card List */}
+          <div className="md:hidden divide-y divide-gray-100">
+            {transactions.length > 0 ? transactions.slice(0, 10).map((tx) => (
+              <div key={tx.id} className="p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <button 
+                      onClick={() => setSelectedMemberId(tx.member_id)}
+                      className="text-[13px] font-bold text-gray-900 leading-tight text-left"
+                    >
+                      {tx.member?.name || 'Unknown'}
+                    </button>
+                    <p className="text-[10px] text-gray-400 mt-1 uppercase font-medium">{tx.date}</p>
+                  </div>
+                  <span className={clsx(
+                    "px-2 py-0.5 rounded-sm text-[9px] font-black uppercase border",
+                    tx.type === 'setoran' ? "bg-green-50 text-green-600 border-green-100" : "bg-red-50 text-red-600 border-red-100"
+                  )}>
+                    {tx.type}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between items-center bg-gray-50/50 p-2 rounded-lg">
+                  <p className="text-sm font-black text-gray-900">
+                    {tx.type === 'penarikan' ? '-' : ''}{formatCurrency(tx.amount)}
+                  </p>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEdit(tx)} className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Pencil size={14} /></button>
+                    <button onClick={() => handleDelete(tx)} className="p-2 bg-red-50 text-red-600 rounded-lg"><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              </div>
+            )) : (
+              <div className="px-4 py-8 text-center text-gray-400 text-xs italic">Belum ada transaksi</div>
+            )}
+          </div>
         </div>
 
-        {/* Member Balances Table */}
-        <div className="bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden">
+        {/* Member Balances Table / Card List */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/30">
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Tabungan Anggota</h3>
             <button 
@@ -353,7 +477,9 @@ export const Tabungan: React.FC = () => {
               Lihat Semua
             </button>
           </div>
-          <div className="overflow-x-auto">
+
+          {/* Desktop View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="text-gray-400 text-[10px] uppercase tracking-wider border-b border-gray-100 font-bold bg-white">
@@ -392,6 +518,30 @@ export const Tabungan: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile View */}
+          <div className="md:hidden divide-y divide-gray-100">
+            {members.filter(m => (m.totalBalance || 0) > 0)
+              .sort((a, b) => (b.totalBalance || 0) - (a.totalBalance || 0))
+              .slice(0, 10).map((member) => (
+              <button
+                key={member.id}
+                onClick={() => setSelectedMemberId(member.id)}
+                className="w-full p-4 flex justify-between items-center hover:bg-gray-50 transition-colors"
+              >
+                <div className="text-left">
+                  <p className="text-[13px] font-bold text-gray-900 leading-tight">{member.name}</p>
+                  <p className="text-[10px] text-gray-400 mt-1 uppercase font-medium">{member.divisi}</p>
+                </div>
+                <p className="text-sm font-black text-gray-900">
+                  {formatCurrency(member.totalBalance || 0)}
+                </p>
+              </button>
+            ))}
+            {members.filter(m => (m.totalBalance || 0) > 0).length === 0 && (
+              <div className="px-4 py-8 text-center text-gray-400 text-xs italic">Belum ada saldo anggota</div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -399,7 +549,7 @@ export const Tabungan: React.FC = () => {
       <Modal
         isOpen={isInputModalOpen}
         onClose={() => setIsInputModalOpen(false)}
-        title={formData.type === 'setoran' ? "Input Uang Masuk" : "Input Penarikan Dana"}
+        title={editingId ? "Edit Transaksi" : (formData.type === 'setoran' ? "Input Uang Masuk" : "Input Penarikan Dana")}
         maxWidth="lg"
       >
         <form onSubmit={handleInputSubmit} className="space-y-4">
@@ -494,9 +644,10 @@ export const Tabungan: React.FC = () => {
             <Button 
               type="submit" 
               className="flex-1 font-bold text-xs" 
-              disabled={isSubmitting || !formData.memberId || !formData.nominal}
+              isLoading={isSubmitting}
+              disabled={!formData.memberId || !formData.nominal}
             >
-              {isSubmitting ? 'Memproses...' : 'Simpan Transaksi'}
+              Simpan {editingId ? 'Perubahan' : 'Transaksi'}
             </Button>
             <Button type="button" variant="outline" className="px-6 font-bold text-xs" onClick={() => setIsInputModalOpen(false)}>
               Batal
@@ -666,29 +817,48 @@ export const Tabungan: React.FC = () => {
           <div className="overflow-x-auto border border-gray-100 rounded-md">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="text-gray-400 text-[10px] uppercase tracking-wider border-b border-gray-100 font-bold bg-white">
-                  <th className="px-4 py-2.5">Nama</th>
-                  <th className="px-4 py-2.5">Waktu</th>
-                  <th className="px-4 py-2.5">Jenis</th>
-                  <th className="px-4 py-2.5 text-right">Nominal</th>
+                <tr className="text-gray-400 text-xs uppercase tracking-wider border-b border-gray-100 font-bold bg-white">
+                  <th className="px-4 py-2.5 font-bold">Nama</th>
+                  <th className="px-4 py-2.5 font-bold">Waktu</th>
+                  <th className="px-4 py-2.5 font-bold">Jenis</th>
+                  <th className="px-4 py-2.5 text-right font-bold">Nominal</th>
+                  <th className="px-4 py-2.5 text-center font-bold">Aksi</th>
                 </tr>
               </thead>
               <tbody className="text-sm divide-y divide-gray-50">
                 {getFilteredTransactions().length > 0 ? getFilteredTransactions().map((tx) => (
                   <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3 font-semibold text-gray-800 text-[13px]">{tx.member?.name || 'Unknown'}</td>
-                    <td className="px-4 py-3 text-gray-500 text-[11px]">
+                    <td className="px-4 py-3 font-bold text-gray-800 text-sm">{tx.member?.name || 'Unknown'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">
                       {tx.date} <span className="text-gray-300 ml-1">{tx.created_at ? new Date(tx.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={clsx("text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-sm border",
+                      <span className={clsx("text-xs font-bold uppercase px-1.5 py-0.5 rounded-sm border",
                         tx.type === 'setoran' ? "text-green-600 border-green-100 bg-green-50/30" : "text-red-600 border-red-100 bg-red-50/30"
                       )}>
                         {tx.type}
                       </span>
                     </td>
-                    <td className={clsx("px-4 py-3 font-bold text-right text-[13px]", tx.type === 'setoran' ? "text-gray-900" : "text-red-600")}>
+                    <td className={clsx("px-4 py-3 font-bold text-right text-sm", tx.type === 'setoran' ? "text-gray-900" : "text-red-600")}>
                       {tx.type === 'penarikan' ? '-' : ''}{formatCurrency(tx.amount).replace('Rp', '').trim()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-center gap-1">
+                        <button 
+                          onClick={() => handleEdit(tx)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="Edit Transaksi"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(tx)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Hapus Transaksi"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )) : (
@@ -701,6 +871,13 @@ export const Tabungan: React.FC = () => {
           </div>
         </div>
       </Modal>
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ ...deleteConfirm, isOpen: false })}
+        onConfirm={confirmDelete}
+        title="Hapus Transaksi"
+        message={`Apakah Anda yakin ingin menghapus transaksi "${deleteConfirm.memberName}" sebesar ${formatCurrency(deleteConfirm.amount)}?`}
+      />
     </div>
   );
 };

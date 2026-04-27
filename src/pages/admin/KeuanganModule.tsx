@@ -3,10 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { getFinanceData, saveFinanceTransaction, deleteFinanceTransaction } from '../../services/financeService';
+import { getFinanceData, saveFinanceTransaction, deleteFinanceTransaction, updateFinanceTransaction } from '../../services/financeService';
+import { subscribeToDataChange } from '../../services/refreshService';
 import type { FinanceTransaction } from '../../services/financeService';
-import { PlusCircle, MinusCircle, Wallet, Trash2, Calendar } from 'lucide-react';
+import { PlusCircle, MinusCircle, Wallet, Trash2, Calendar, Pencil } from 'lucide-react';
 import clsx from 'clsx';
+
+import { toast } from 'sonner';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 
 interface KeuanganModuleProps {
   category: 'pengurus' | 'media';
@@ -22,13 +26,27 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
     amount: '',
     description: '',
     date: new Date().toISOString().split('T')[0]});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: string; description: string }>({
+    isOpen: false,
+    id: '',
+    description: ''
+  });
 
   const fetchData = async () => {
     const data = await getFinanceData(category);
     setTransactions(data);};
 
   useEffect(() => {
-    fetchData();}, [category]);
+    fetchData();
+
+    // Subscribe to real-time changes
+    const unsubscribe = subscribeToDataChange(() => {
+      fetchData();
+    });
+
+    return () => unsubscribe();
+  }, [category]);
 
   const totalBalance = transactions.reduce((sum, t) => {
     return t.type === 'masuk' ? sum + t.amount : sum - t.amount;}, 0);
@@ -37,28 +55,69 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
     e.preventDefault();
     setIsSubmitting(true);
     
-    const success = await saveFinanceTransaction({
-      category,
-      type: modalType,
-      amount: Number(formData.amount),
-      description: formData.description,
-      date: formData.date});
+    const promise = editingId 
+      ? updateFinanceTransaction(editingId, { ...formData, amount: Number(formData.amount), category, type: modalType })
+      : saveFinanceTransaction({
+          category,
+          type: modalType,
+          amount: Number(formData.amount),
+          description: formData.description,
+          date: formData.date
+        });
 
-    if (success) {
-      setIsModalOpen(false);
-      setFormData({
-        amount: '',
-        description: '',
-        date: new Date().toISOString().split('T')[0]});
-      await fetchData();} else {
-      alert('Gagal menyimpan transaksi!');}
+    toast.promise(promise, {
+      loading: 'Menyimpan transaksi...',
+      success: (res) => {
+        if (res) {
+          setIsModalOpen(false);
+          setEditingId(null);
+          setFormData({
+            amount: '',
+            description: '',
+            date: new Date().toISOString().split('T')[0]});
+          fetchData();
+          return editingId ? 'Transaksi berhasil diperbarui' : 'Transaksi berhasil disimpan';
+        }
+        throw new Error('Gagal menyimpan');
+      },
+      error: 'Terjadi kesalahan sistem'
+    });
+
     setIsSubmitting(false);};
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Yakin ingin menghapus transaksi ini?')) {
-      const success = await deleteFinanceTransaction(id);
-      if (success) {
-        await fetchData();}}};
+  const handleEdit = (transaction: FinanceTransaction) => {
+    setEditingId(transaction.id);
+    setModalType(transaction.type);
+    setFormData({
+      amount: transaction.amount.toString(),
+      description: transaction.description,
+      date: transaction.date
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    const tx = transactions.find(t => t.id === id);
+    if (tx) {
+      setDeleteConfirm({ isOpen: true, id: tx.id, description: tx.description });
+    }
+  };
+
+  const confirmDelete = async () => {
+    const { id, description } = deleteConfirm;
+    setDeleteConfirm(prev => ({ ...prev, isOpen: false }));
+    
+    const promise = deleteFinanceTransaction(id);
+
+    toast.promise(promise, {
+      loading: 'Menghapus transaksi...',
+      success: () => {
+        fetchData();
+        return `Transaksi "${description}" berhasil dihapus`;
+      },
+      error: 'Gagal menghapus transaksi'
+    });
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -67,7 +126,13 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
       maximumFractionDigits: 0}).format(amount);};
 
   const openModal = (type: 'masuk' | 'keluar') => {
+    setEditingId(null);
     setModalType(type);
+    setFormData({
+      amount: '',
+      description: '',
+      date: new Date().toISOString().split('T')[0]
+    });
     setIsModalOpen(true);};
 
   return (
@@ -76,7 +141,7 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white p-3 md:p-4 border-b border-gray-200 rounded-md shadow-sm">
         <div>
           <h2 className="text-lg font-semibold text-gray-800 leading-tight">{title}</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Manajemen dana dan riwayat transaksi {category}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Manajemen dana dan riwayat transaksi {category === 'pengurus' ? 'Chondro' : category}</p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
           <Button 
@@ -121,14 +186,15 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
           </span>
         </div>
         
-        <div className="overflow-x-auto">
+        {/* Desktop View Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50/50 text-gray-400 text-xs  border-b border-gray-100">
+              <tr className="bg-gray-50/50 text-gray-400 text-xs border-b border-gray-100">
                 <th className="px-6 py-3 font-bold">Keterangan</th>
                 <th className="px-6 py-3 font-bold">Tanggal</th>
                 <th className="px-6 py-3 font-bold text-right">Jumlah</th>
-                <th className="px-6 py-3 font-bold text-center w-20">Aksi</th>
+                <th className="px-6 py-3 font-bold text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="text-sm divide-y divide-gray-50">
@@ -136,32 +202,39 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
                 transactions.map((t) => (
                   <tr key={t.id} className="hover:bg-gray-50 transition-colors group">
                     <td className="px-6 py-4">
-                      <p className="font-semibold text-gray-800">{t.description}</p>
-                      <p className={clsx("text-xs font-bold uppercase",
+                      <div className="font-bold text-gray-800 text-sm">{t.description}</div>
+                      <div className={clsx("text-[10px] font-bold uppercase mt-0.5",
                         t.type === 'masuk' ? "text-green-600" : "text-red-600"
                       )}>
                         {t.type === 'masuk' ? 'Pemasukan' : 'Pengeluaran'}
-                      </p>
-                    </td>
-                    <td className="px-6 py-4 text-gray-500 font-medium">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} />
-                        {new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </div>
                     </td>
-                    <td className={clsx("px-6 py-4 text-right font-bold text-base",
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-xs text-gray-700">
+                        <Calendar size={12} className="text-red-700" />
+                        <span>{new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                    </td>
+                    <td className={clsx("px-6 py-4 text-right font-bold text-sm",
                       t.type === 'masuk' ? "text-green-600" : "text-red-600"
                     )}>
                       {t.type === 'masuk' ? '+' : '-'} {formatCurrency(t.amount).replace('Rp', '').trim()}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-center">
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-1">
+                        <button 
+                          onClick={() => handleEdit(t)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Edit Transaksi"
+                        >
+                          <Pencil size={14} />
+                        </button>
                         <button 
                           onClick={() => handleDelete(t.id)}
-                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Hapus Transaksi"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
@@ -177,13 +250,51 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
             </tbody>
           </table>
         </div>
+
+        {/* Mobile View Card List */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {transactions.length > 0 ? (
+            transactions.map((t) => (
+              <div key={t.id} className="p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <p className="text-[13px] font-bold text-gray-900 leading-tight">{t.description}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={clsx("text-[9px] font-black uppercase px-1.5 py-0.5 rounded border",
+                        t.type === 'masuk' ? "bg-green-50 text-green-600 border-green-100" : "bg-red-50 text-red-600 border-red-100"
+                      )}>
+                        {t.type === 'masuk' ? 'Pemasukan' : 'Pengeluaran'}
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-medium">{new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={clsx("text-sm font-black",
+                      t.type === 'masuk' ? "text-green-600" : "text-red-600"
+                    )}>
+                      {t.type === 'masuk' ? '+' : '-'} {formatCurrency(t.amount).replace('Rp', '').trim()}
+                    </p>
+                    <div className="flex justify-end gap-2 mt-2">
+                      <button onClick={() => handleEdit(t)} className="p-1.5 text-blue-600 bg-blue-50 rounded-md"><Pencil size={12} /></button>
+                      <button onClick={() => handleDelete(t.id)} className="p-1.5 text-red-600 bg-red-50 rounded-md"><Trash2 size={12} /></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="px-6 py-12 text-center text-gray-400 italic text-xs">
+              Belum ada riwayat transaksi.
+            </div>
+          )}
+        </div>
       </Card>
 
       {/* Input Modal */}
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        title={modalType === 'masuk' ? 'Input Uang Masuk' : 'Input Uang Keluar'}
+        title={editingId ? `Edit ${modalType === 'masuk' ? 'Pemasukan' : 'Pengeluaran'}` : (modalType === 'masuk' ? 'Input Uang Masuk' : 'Input Uang Keluar')}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -227,9 +338,9 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
               className={clsx("flex-1 h-11 border-none",
                 modalType === 'masuk' ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
               )} 
-              disabled={isSubmitting}
+              isLoading={isSubmitting}
             >
-              {isSubmitting ? 'Memproses...' : 'Simpan Transaksi'}
+              Simpan Transaksi
             </Button>
             <Button type="button" variant="outline" className="px-6" onClick={() => setIsModalOpen(false)}>
               Batal
@@ -237,6 +348,13 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
           </div>
         </form>
       </Modal>
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ ...deleteConfirm, isOpen: false })}
+        onConfirm={confirmDelete}
+        title="Hapus Transaksi Keuangan"
+        message={`Apakah Anda yakin ingin menghapus transaksi "${deleteConfirm.description}"? Saldo akan disesuaikan kembali.`}
+      />
     </div>
   );
 };

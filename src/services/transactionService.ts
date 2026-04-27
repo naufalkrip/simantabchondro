@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import type { Transaction } from '../types/transaction';
 import { updateMember } from './memberService';
+import { notifyDataChange } from './refreshService';
 
 export const getTransactions = async (): Promise<Transaction[]> => {
   const { data, error } = await supabase
@@ -42,6 +43,7 @@ export const addTransaction = async (transaction: Omit<Transaction, 'id' | 'crea
       await updateMemberBalance(transaction.member_id, transaction.type, transaction.amount);
     }
 
+    notifyDataChange();
     return true;
   } catch (error) {
     console.error('Error adding transaction:', error);
@@ -70,6 +72,7 @@ export const updateTransactionStatus = async (id: string, status: 'approved' | '
       await updateMemberBalance(transaction.member_id, transaction.type, transaction.amount);
     }
 
+    notifyDataChange();
     return true;
   } catch (error) {
     console.error('Error updating transaction status:', error);
@@ -77,14 +80,67 @@ export const updateTransactionStatus = async (id: string, status: 'approved' | '
   }
 };
 
+export const updateTransaction = async (id: string, updates: Partial<Transaction>): Promise<boolean> => {
+  try {
+    const { data: oldTx, error: fetchError } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !oldTx) throw fetchError || new Error('Transaction not found');
+
+    const { error } = await supabase
+      .from('transactions')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) throw error;
+
+    // Adjust balance if status is approved
+    if (oldTx.status === 'approved') {
+      // Revert old transaction
+      await updateMemberBalance(oldTx.member_id, oldTx.type === 'setoran' ? 'penarikan' : 'setoran', oldTx.amount);
+      // Apply new transaction
+      if (updates.amount !== undefined || updates.type !== undefined || updates.member_id !== undefined) {
+        const finalMemberId = updates.member_id || oldTx.member_id;
+        const finalType = (updates.type || oldTx.type) as 'setoran' | 'penarikan';
+        const finalAmount = updates.amount !== undefined ? updates.amount : oldTx.amount;
+        await updateMemberBalance(finalMemberId, finalType, finalAmount);
+      }
+    }
+
+    notifyDataChange();
+    return true;
+  } catch (error) {
+    console.error('Error updating transaction:', error);
+    return false;
+  }
+};
+
 export const deleteTransaction = async (id: string): Promise<boolean> => {
   try {
+    const { data: tx, error: fetchError } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !tx) throw fetchError || new Error('Transaction not found');
+
     const { error } = await supabase
       .from('transactions')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
+
+    // Adjust balance if approved
+    if (tx.status === 'approved') {
+      await updateMemberBalance(tx.member_id, tx.type === 'setoran' ? 'penarikan' : 'setoran', tx.amount);
+    }
+
+    notifyDataChange();
     return true;
   } catch (error) {
     console.error('Error deleting transaction:', error);

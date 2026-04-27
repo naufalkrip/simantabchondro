@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import type { Attendance } from '../types/attendance';
+import { notifyDataChange } from './refreshService';
 
 export const getAttendanceByDate = async (date: string): Promise<Attendance[]> => {
   const { data, error } = await supabase
@@ -26,6 +27,7 @@ export const saveAttendance = async (attendanceRecords: Omit<Attendance, 'id'>[]
       .upsert(attendanceRecords, { onConflict: 'member_id,date' });
 
     if (error) throw error;
+    notifyDataChange();
     return true;
   } catch (error) {
     console.error('Error saving attendance:', error);

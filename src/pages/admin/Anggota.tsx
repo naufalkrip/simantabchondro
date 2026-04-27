@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { getMembers, addMember, deleteMember, updateMember } from '../../services/memberService';
+import { subscribeToDataChange } from '../../services/refreshService';
 import type { Member } from '../../types/member';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Pencil, Trash2, UserPlus } from 'lucide-react';
+import { toast } from 'sonner';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 
 const BANK_OPTIONS = ['BCA', 'BRI', 'BNI', 'Mandiri', 'BSI', 'CIMB Niaga', 'Dana', 'OVO', 'Gopay', 'ShopeePay'];
 
@@ -26,20 +29,29 @@ export const Anggota: React.FC = () => {
   const [newDivision, setNewDivision] = useState('');
   const [isAddingDivision, setIsAddingDivision] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; id: string; name: string }>({
+    isOpen: false,
+    id: '',
+    name: ''
+  });
 
   const fetchMembers = async () => {
-    console.log('Fetching members in Anggota component...');
     const data = await getMembers();
-    console.log('Members data received:', data);
     setMembers(data);
     
     const existingDivisions = Array.from(new Set(data.map(m => m.divisi)));
-    console.log('Existing divisions from data:', existingDivisions);
     setDivisions(prev => Array.from(new Set([...prev, ...existingDivisions])));
   };
 
   useEffect(() => {
     fetchMembers();
+
+    // Subscribe to real-time changes
+    const unsubscribe = subscribeToDataChange(() => {
+      fetchMembers();
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,21 +63,26 @@ export const Anggota: React.FC = () => {
     if (!payload.bankAccountNumber) delete payload.bankAccountNumber;
     if (!payload.bankOwnerName) delete payload.bankOwnerName;
 
-    let success = false;
-    if (editingId) {
-      success = await updateMember(editingId, payload);
-    } else {
-      success = await addMember(payload);
-    }
+    const promise = editingId 
+      ? updateMember(editingId, payload) 
+      : addMember(payload);
 
-    if (success) {
-      setIsModalOpen(false);
-      resetForm();
-      await fetchMembers();
-    } else {
-      alert('Gagal menyimpan data!');
-    }
-    setIsSubmitting(false);};
+    toast.promise(promise, {
+      loading: editingId ? 'Memperbarui data...' : 'Menambahkan anggota...',
+      success: (res) => {
+        if (res) {
+          setIsModalOpen(false);
+          resetForm();
+          fetchMembers();
+          return editingId ? 'Data berhasil diperbarui' : 'Anggota berhasil ditambahkan';
+        }
+        throw new Error('Gagal menyimpan data');
+      },
+      error: 'Terjadi kesalahan sistem'
+    });
+
+    setIsSubmitting(false);
+  };
 
   const resetForm = () => {
     setFormData({
@@ -91,25 +108,41 @@ export const Anggota: React.FC = () => {
       bankName: member.bankName || ''
     });
     setEditingId(member.id);
-    setIsModalOpen(true);};
+    setIsModalOpen(true);
+  };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Yakin ingin menghapus anggota ini?')) {
-      await deleteMember(id);
-      await fetchMembers();
+  const handleDelete = (id: string) => {
+    const member = members.find(m => m.id === id);
+    if (member) {
+      setDeleteConfirm({ isOpen: true, id: member.id, name: member.name });
     }
+  };
+
+  const confirmDelete = async () => {
+    const { id, name } = deleteConfirm;
+    setDeleteConfirm(prev => ({ ...prev, isOpen: false }));
+    
+    const promise = deleteMember(id);
+
+    toast.promise(promise, {
+      loading: `Menghapus ${name}...`,
+      success: () => {
+        fetchMembers();
+        return `Anggota ${name} berhasil dihapus`;
+      },
+      error: 'Gagal menghapus anggota'
+    });
   };
 
   const handleAddDivision = () => {
     if (newDivision.trim() && !divisions.includes(newDivision.trim())) {
       setDivisions([...divisions, newDivision.trim()]);
       setFormData({ ...formData, divisi: newDivision.trim() });
+      toast.success(`Divisi ${newDivision.trim()} ditambahkan`);
     }
     setNewDivision('');
     setIsAddingDivision(false);
   };
-
-
 
   const handleDownloadPDF = () => {
     try {
@@ -133,11 +166,11 @@ export const Anggota: React.FC = () => {
       }, {} as Record<string, Member[]>);
 
       if (Object.keys(grouped).length === 0) {
-        alert('Tidak ada data anggota untuk didownload.');
-        return;}
+        toast.error('Tidak ada data anggota untuk didownload');
+        return;
+      }
 
       Object.entries(grouped).forEach(([division, membersList]) => {
-        // Add division title
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.text(`Divisi: ${division}`, 14, currentY);
@@ -156,7 +189,8 @@ export const Anggota: React.FC = () => {
           startY: currentY,
           styles: { fontSize: 9 },
           headStyles: { fillColor: [185, 28, 28] },
-          margin: { left: 14, right: 14 }});
+          margin: { left: 14, right: 14 }
+        });
 
         currentY = (doc as any).lastAutoTable.finalY + 10;
         if (currentY > 260) {
@@ -166,24 +200,25 @@ export const Anggota: React.FC = () => {
       });
 
       doc.save('Laporan_Anggota_SIMANTAB.pdf');
+      toast.success('Laporan PDF berhasil diunduh');
     } catch (error) {
       console.error('PDF Error:', error);
-      alert('Gagal membuat PDF. Silakan coba lagi.');
+      toast.error('Gagal membuat PDF');
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white p-3 md:p-4 border-b border-gray-200 rounded-md shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white p-3 md:p-4 border-b border-gray-200 rounded-xl shadow-sm">
         <div>
-          <h2 className="text-lg font-semibold text-gray-800 leading-tight">Manajemen Anggota</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Kelola dan organisir anggota berdasarkan divisi</p>
+          <h2 className="text-base md:text-lg font-semibold text-gray-800 leading-tight">Manajemen Anggota</h2>
+          <p className="text-[10px] md:text-xs text-gray-500 mt-0.5">Kelola dan organisir anggota berdasarkan divisi</p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
-          <Button onClick={handleDownloadPDF} variant="outline" size="sm" className="flex-1 md:flex-none text-xs font-semibold px-3 py-1.5 border-gray-200 rounded-md">
+          <Button onClick={handleDownloadPDF} variant="outline" size="sm" className="flex-1 md:flex-none text-[11px] md:text-xs font-semibold px-3 py-1.5 border-gray-200 rounded-md h-9">
             Download PDF
           </Button>
-          <Button onClick={() => { resetForm(); setIsModalOpen(true); }} variant="primary" size="sm" className="flex-1 md:flex-none gap-1.5 text-xs font-bold  px-4 py-1.5 rounded-md">
+          <Button onClick={() => { resetForm(); setIsModalOpen(true); }} variant="primary" size="sm" className="flex-1 md:flex-none gap-1.5 text-[11px] md:text-xs font-bold px-4 py-1.5 rounded-md h-9">
             <UserPlus size={14} /> Tambah
           </Button>
         </div>
@@ -322,60 +357,88 @@ export const Anggota: React.FC = () => {
           if (divisionMembers.length === 0) return null;
           
           return (
-            <div key={division} className="bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden">
+            <div key={division} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
               <div className="px-4 py-2 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                 <div className="flex items-center gap-2">
                   <div className="w-1 h-3 bg-red-600 rounded-full" />
                   <h3 className="text-xs font-bold text-gray-800 ">{division}</h3>
                 </div>
-                <span className="text-xs font-bold  bg-red-50 text-red-600 px-2 py-0.5 rounded-sm border border-red-100">
+                <span className="text-[10px] md:text-xs font-bold  bg-red-50 text-red-600 px-2 py-0.5 rounded-sm border border-red-100">
                   {divisionMembers.length} Anggota
                 </span>
               </div>
-              <div className="overflow-x-auto">
+
+              {/* Desktop View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-white text-gray-400 text-xs  border-b border-gray-100 font-bold">
-                      <th className="px-3 py-2 font-bold">Nama Anggota</th>
-                      <th className="px-3 py-2 font-bold">Telepon</th>
-                      <th className="px-3 py-2 font-bold text-center w-24">Aksi</th>
-                      <th className="px-3 py-2 font-bold text-right">Gabung</th>
+                    <tr className="bg-gray-50/50 text-gray-400 text-xs border-b border-gray-100 font-bold">
+                      <th className="px-6 py-3 font-bold">Nama Anggota</th>
+                      <th className="px-6 py-3 font-bold">Telepon</th>
+                      <th className="px-6 py-3 font-bold text-right">Aksi</th>
+                      <th className="px-6 py-3 font-bold text-right">Gabung</th>
                     </tr>
                   </thead>
                   <tbody className="text-sm divide-y divide-gray-50">
                     {divisionMembers.map((member) => (
                       <tr key={member?.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-3 py-2">
-                          <p className="font-semibold text-gray-800 text-[13px]">{member?.name || 'Unknown'}</p>
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-gray-800 text-sm">{member?.name || 'Unknown'}</p>
                         </td>
-                        <td className="px-3 py-2">
-                          <div className="text-gray-500 text-sm font-medium">
+                        <td className="px-6 py-4">
+                          <div className="text-gray-500 text-xs font-medium">
                             {member?.phone || '-'}
                           </div>
                         </td>
-                        <td className="px-3 py-2">
-                          <div className="flex justify-center gap-1">
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end gap-1">
                             <button 
                               onClick={() => handleEdit(member)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors border border-transparent"
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             >
-                              <Pencil size={12} />
+                              <Pencil size={14} />
                             </button>
                             <button 
                               onClick={() => handleDelete(member.id)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors border border-transparent"
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             >
-                              <Trash2 size={12} />
+                              <Trash2 size={14} />
                             </button>
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-right font-medium text-gray-400 text-xs">
+                        <td className="px-6 py-4 text-right font-medium text-gray-400 text-xs">
                           {member?.joinedDate}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile View */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {divisionMembers.map((member) => (
+                  <div key={member?.id} className="p-4 flex justify-between items-center">
+                    <div>
+                      <p className="text-[13px] font-bold text-gray-900 leading-tight">{member?.name}</p>
+                      <p className="text-[9px] text-gray-400 mt-1 uppercase font-medium tracking-wider">{member?.phone || '-'}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleEdit(member)}
+                        className="p-2 bg-blue-50 text-blue-600 rounded-lg active:scale-95 transition-all"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(member.id)}
+                        className="p-2 bg-red-50 text-red-600 rounded-lg active:scale-95 transition-all"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           );})}
@@ -394,6 +457,13 @@ export const Anggota: React.FC = () => {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ ...deleteConfirm, isOpen: false })}
+        onConfirm={confirmDelete}
+        title="Hapus Anggota"
+        message={`Apakah Anda yakin ingin menghapus "${deleteConfirm.name}" dari daftar anggota? Aksi ini tidak dapat dibatalkan.`}
+      />
     </div>
   );
 };

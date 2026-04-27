@@ -8,6 +8,7 @@ import {
   updateSchedule, 
   deleteSchedule
 } from '../../services/scheduleService';
+import { subscribeToDataChange } from '../../services/refreshService';
 import type { Schedule } from '../../services/scheduleService';
 import { 
   PlusCircle, 
@@ -19,6 +20,9 @@ import {
 } from 'lucide-react';
 
 
+import { toast } from 'sonner';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+
 export const Jadwal: React.FC = () => {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,6 +33,15 @@ export const Jadwal: React.FC = () => {
   const [activityCategories, setActivityCategories] = useState<string[]>(['Latihan Rutin', 'Tampilan Parade', 'Rapat Pengurus']);
   const [isAddingActivity, setIsAddingActivity] = useState(false);
   const [newActivityName, setNewActivityName] = useState('');
+  const [deleteScheduleConfirm, setDeleteScheduleConfirm] = useState<{ isOpen: boolean; id: string; title: string }>({
+    isOpen: false,
+    id: '',
+    title: ''
+  });
+  const [deleteCategoryConfirm, setDeleteCategoryConfirm] = useState<{ isOpen: boolean; name: string }>({
+    isOpen: false,
+    name: ''
+  });
 
   const [formData, setFormData] = useState({
     title: 'Latihan Rutin',
@@ -52,7 +65,15 @@ export const Jadwal: React.FC = () => {
         setActivityCategories(combined);}}};
 
   useEffect(() => {
-    fetchData();}, []);
+    fetchData();
+
+    // Subscribe to real-time changes
+    const unsubscribe = subscribeToDataChange(() => {
+      fetchData();
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const saveCategories = (cats: string[]) => {
     setActivityCategories(cats);
@@ -62,31 +83,49 @@ export const Jadwal: React.FC = () => {
     if (newActivityName.trim() && !activityCategories.includes(newActivityName.trim())) {
       const updated = [...activityCategories, newActivityName.trim()];
       saveCategories(updated);
-      setFormData({ ...formData, title: newActivityName.trim() });}
+      setFormData({ ...formData, title: newActivityName.trim() });
+      toast.success(`Kategori ${newActivityName.trim()} ditambahkan`);
+    }
     setNewActivityName('');
     setIsAddingActivity(false);};
 
   const handleDeleteCategory = (catToDelete: string) => {
-    if (window.confirm(`Hapus kategori "${catToDelete}"?`)) {
-      const updated = activityCategories.filter(c => c !== catToDelete);
-      saveCategories(updated);
-      if (formData.title === catToDelete) {
-        setFormData({ ...formData, title: updated[0] || '' });}}};
+    setDeleteCategoryConfirm({ isOpen: true, name: catToDelete });
+  };
+
+  const confirmDeleteCategory = () => {
+    const catToDelete = deleteCategoryConfirm.name;
+    const updated = activityCategories.filter(c => c !== catToDelete);
+    saveCategories(updated);
+    if (formData.title === catToDelete) {
+      setFormData({ ...formData, title: updated[0] || '' });
+    }
+    setDeleteCategoryConfirm({ isOpen: false, name: '' });
+    toast.success(`Kategori ${catToDelete} dihapus`);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    let success = false;
-    if (editingId) {
-      success = await updateSchedule(editingId, formData);} else {
-      success = await addSchedule(formData);}
+    const promise = editingId 
+      ? updateSchedule(editingId, formData) 
+      : addSchedule(formData);
 
-    if (success) {
-      setIsModalOpen(false);
-      resetForm();
-      await fetchData();} else {
-      alert('Gagal menyimpan jadwal!');}
+    toast.promise(promise, {
+      loading: 'Menyimpan jadwal...',
+      success: (res) => {
+        if (res) {
+          setIsModalOpen(false);
+          resetForm();
+          fetchData();
+          return editingId ? 'Jadwal diperbarui' : 'Jadwal ditambahkan';
+        }
+        throw new Error('Gagal menyimpan');
+      },
+      error: 'Terjadi kesalahan sistem'
+    });
+
     setIsSubmitting(false);};
 
   const handleEdit = (schedule: Schedule) => {
@@ -100,11 +139,28 @@ export const Jadwal: React.FC = () => {
     setEditingId(schedule.id);
     setIsModalOpen(true);};
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Yakin ingin menghapus jadwal ini?')) {
-      const success = await deleteSchedule(id);
-      if (success) {
-        await fetchData();}}};
+  const handleDelete = (id: string) => {
+    const schedule = schedules.find(s => s.id === id);
+    if (schedule) {
+      setDeleteScheduleConfirm({ isOpen: true, id: schedule.id, title: schedule.title });
+    }
+  };
+
+  const confirmDeleteSchedule = async () => {
+    const { id, title } = deleteScheduleConfirm;
+    setDeleteScheduleConfirm(prev => ({ ...prev, isOpen: false }));
+    
+    const promise = deleteSchedule(id);
+
+    toast.promise(promise, {
+      loading: `Menghapus jadwal ${title}...`,
+      success: () => {
+        fetchData();
+        return `Jadwal ${title} berhasil dihapus`;
+      },
+      error: 'Gagal menghapus jadwal'
+    });
+  };
 
   const resetForm = () => {
     setFormData({
@@ -155,7 +211,8 @@ export const Jadwal: React.FC = () => {
             </div>
             
             <Card className="p-0 overflow-hidden border-0 shadow-sm ring-1 ring-gray-100">
-              <div className="overflow-x-auto">
+              {/* Desktop View Table */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100">
@@ -194,7 +251,7 @@ export const Jadwal: React.FC = () => {
                           <div className="flex justify-end gap-1">
                             <button 
                               onClick={() => handleEdit(item)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                               title="Edit"
                             >
                               <Pencil size={14} />
@@ -212,6 +269,34 @@ export const Jadwal: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile View Card List */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {monthSchedules.map((item) => (
+                  <div key={item.id} className="p-4 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-[13px] font-bold text-gray-900 leading-tight">{item.title}</p>
+                        <div className="flex items-center gap-2 mt-1.5 text-[10px] text-gray-500 font-medium">
+                          <CalendarIcon size={10} className="text-red-700" />
+                          <span>{new Date(item.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                          <span className="mx-1">•</span>
+                          <Clock size={10} className="text-gray-400" />
+                          <span>{item.time}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => handleEdit(item)} className="p-1.5 text-blue-600 bg-blue-50 rounded-md"><Pencil size={12} /></button>
+                        <button onClick={() => handleDelete(item.id)} className="p-1.5 text-red-600 bg-red-50 rounded-md"><Trash2 size={12} /></button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 bg-gray-50/50 rounded-lg text-[11px] text-gray-600">
+                      <MapPin size={10} className="text-red-700 shrink-0" />
+                      <span className="truncate">{item.location}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </Card>
           </div>
@@ -337,8 +422,8 @@ export const Jadwal: React.FC = () => {
           </div>
 
           <div className="pt-4 flex gap-3">
-            <Button type="submit" className="flex-1 h-11" disabled={isSubmitting}>
-              {isSubmitting ? 'Memproses...' : editingId ? 'Simpan Perubahan' : 'Tambah ke Jadwal'}
+            <Button type="submit" className="flex-1 h-11" isLoading={isSubmitting}>
+              {editingId ? 'Simpan Perubahan' : 'Tambah ke Jadwal'}
             </Button>
             <Button type="button" variant="outline" className="px-6" onClick={() => setIsModalOpen(false)}>
               Batal
@@ -346,6 +431,21 @@ export const Jadwal: React.FC = () => {
           </div>
         </form>
       </Modal>
+      <ConfirmDialog
+        isOpen={deleteScheduleConfirm.isOpen}
+        onClose={() => setDeleteScheduleConfirm({ ...deleteScheduleConfirm, isOpen: false })}
+        onConfirm={confirmDeleteSchedule}
+        title="Hapus Jadwal"
+        message={`Apakah Anda yakin ingin menghapus jadwal kegiatan "${deleteScheduleConfirm.title}"?`}
+      />
+
+      <ConfirmDialog
+        isOpen={deleteCategoryConfirm.isOpen}
+        onClose={() => setDeleteCategoryConfirm({ ...deleteCategoryConfirm, isOpen: false })}
+        onConfirm={confirmDeleteCategory}
+        title="Hapus Kategori"
+        message={`Apakah Anda yakin ingin menghapus kategori "${deleteCategoryConfirm.name}"?`}
+      />
     </div>
   );
 };

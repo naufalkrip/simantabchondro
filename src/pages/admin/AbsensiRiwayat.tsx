@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { getMembers } from '../../services/memberService';
 import { getAttendanceByDate, saveAttendance, getAttendanceHistory } from '../../services/attendanceService';
 import type { Member } from '../../types/member';
 import { ChevronDown, History, Info } from 'lucide-react';
+import { toast } from 'sonner';
 
 export const AbsensiRiwayat: React.FC = () => {
   const [members, setMembers] = useState<Member[]>([]);
@@ -94,14 +94,20 @@ export const AbsensiRiwayat: React.FC = () => {
       location: editingLocation
     }));
 
-    const success = await saveAttendance(recordsToSave);
-    if (success) {
-      alert('Perubahan absensi berhasil disimpan!');
-      setIsEditModalOpen(false);
-      loadData();
-    } else {
-      alert('Gagal menyimpan perubahan.');
-    }
+    const promise = saveAttendance(recordsToSave);
+
+    toast.promise(promise, {
+      loading: 'Menyimpan perubahan absensi...',
+      success: (res) => {
+        if (res) {
+          setIsEditModalOpen(false);
+          loadData();
+          return 'Perubahan absensi berhasil disimpan';
+        }
+        throw new Error('Gagal menyimpan');
+      },
+      error: 'Terjadi kesalahan sistem'
+    });
 
     setIsSavingEdit(false);
   };
@@ -148,15 +154,15 @@ export const AbsensiRiwayat: React.FC = () => {
               <button
                 key={item.date}
                 onClick={() => handleEditHistory(item.date, item.location)}
-                className="group relative bg-white p-5 rounded-xl border border-gray-100 hover:border-red-300 hover:shadow-md transition-all text-left overflow-hidden"
+                className="group relative bg-white p-5 rounded-xl border border-gray-100 hover:border-blue-300 hover:shadow-md transition-all text-left overflow-hidden"
               >
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="space-y-2">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{item.date}</p>
-                  <h3 className="text-base font-bold text-gray-900 group-hover:text-red-700 transition-colors uppercase">
+                  <h3 className="text-base font-bold text-gray-900 group-hover:text-blue-700 transition-colors uppercase">
                     {item.location || 'Tanpa Keterangan'}
                   </h3>
-                  <div className="flex items-center gap-2 text-[10px] font-black text-red-600 uppercase">
+                  <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 uppercase">
                     Edit Detail <ChevronDown size={12} className="-rotate-90" />
                   </div>
                 </div>
@@ -194,7 +200,8 @@ export const AbsensiRiwayat: React.FC = () => {
           </div>
 
           <div className="border border-gray-100 rounded-xl overflow-hidden bg-white shadow-sm">
-            <div className="overflow-x-auto max-h-[50vh]">
+            {/* Desktop View Table */}
+            <div className="hidden md:block overflow-x-auto max-h-[50vh]">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-50 text-gray-400 text-[10px] font-black uppercase tracking-widest border-b border-gray-100">
@@ -232,14 +239,39 @@ export const AbsensiRiwayat: React.FC = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile View Card List */}
+            <div className="md:hidden divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
+              {members.map((member) => (
+                <div key={member.id} className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-[13px] font-bold text-gray-900 leading-tight">{member.name}</p>
+                    <p className="text-[10px] text-gray-400 mt-1 uppercase font-medium">{member.divisi}</p>
+                  </div>
+                  <select
+                    className={`px-3 py-1.5 border rounded-lg text-[11px] font-bold outline-none transition-all cursor-pointer ${
+                      (editingAttendance[member.id] || 'hadir') === 'hadir' ? 'bg-green-50 text-green-700 border-green-200' :
+                      (editingAttendance[member.id] || 'hadir') === 'izin' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                      'bg-red-50 text-red-700 border-red-200'
+                    }`}
+                    value={editingAttendance[member.id] || 'hadir'}
+                    onChange={(e) => handleStatusChangeEdit(member.id, e.target.value as any)}
+                  >
+                    <option value="hadir">Hadir</option>
+                    <option value="izin">Izin</option>
+                    <option value="bolos">Bolos</option>
+                  </select>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">
             <Button onClick={() => setIsEditModalOpen(false)} variant="outline" className="flex-1 font-bold text-xs py-3">
               Batal
             </Button>
-            <Button onClick={handleSaveEdit} disabled={isSavingEdit} variant="primary" className="flex-1 font-bold text-xs py-3">
-              {isSavingEdit ? 'Menyimpan...' : 'Simpan Perubahan'}
+            <Button onClick={handleSaveEdit} isLoading={isSavingEdit} variant="primary" className="flex-1 font-bold text-xs py-3">
+              Simpan Perubahan
             </Button>
           </div>
         </div>

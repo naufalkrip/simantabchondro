@@ -16,7 +16,7 @@ import { AdminLogin } from './pages/admin/AdminLogin';
 import { Jadwal } from './pages/admin/Jadwal';
 import { Pengaturan } from './pages/admin/Pengaturan';
 
-import { KeuanganPengurus } from './pages/admin/KeuanganPengurus';
+import { KeuanganChondro } from './pages/admin/KeuanganChondro';
 import { KeuanganMedia } from './pages/admin/KeuanganMedia';
 
 import { MemberLayout } from './layouts/MemberLayout';
@@ -24,10 +24,13 @@ import { Dashboard as MemberDashboard } from './pages/member/Dashboard';
 import { Absensi as MemberAbsensi } from './pages/member/Absensi';
 import { Tabungan as MemberTabungan } from './pages/member/Tabungan';
 import { Pengaturan as MemberPengaturan } from './pages/member/Pengaturan';
+import { Jadwal as MemberJadwal } from './pages/member/Jadwal';
+import { Toaster } from 'sonner';
 
 function App() {
   return (
     <AuthProvider>
+      <Toaster position="top-right" richColors closeButton />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Navigate to="/member/login" replace />} />
@@ -44,6 +47,7 @@ function App() {
             <Route path="dashboard" element={<MemberDashboard />} />
             <Route path="absensi" element={<MemberAbsensi />} />
             <Route path="savings" element={<MemberTabungan />} />
+            <Route path="jadwal" element={<MemberJadwal />} />
             <Route path="pengaturan" element={<MemberPengaturan />} />
             <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Route>
@@ -63,7 +67,7 @@ function App() {
             <Route path="savings" element={<Tabungan />} />
             <Route path="setoran" element={<Setoran />} />
             <Route path="penarikan" element={<Penarikan />} />
-            <Route path="keuangan-pengurus" element={<KeuanganPengurus />} />
+            <Route path="keuangan-chondro" element={<KeuanganChondro />} />
             <Route path="keuangan-media" element={<KeuanganMedia />} />
             <Route path="jadwal" element={<Jadwal />} />
             <Route path="pengaturan" element={<Pengaturan />} />

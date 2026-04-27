@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { notifyDataChange } from './refreshService';
 
 export interface Schedule {
   id: string;
@@ -38,6 +39,7 @@ export const addSchedule = async (schedule: Omit<Schedule, 'id'>): Promise<boole
       .insert([schedule]);
 
     if (error) throw error;
+    notifyDataChange();
     return true;
   } catch (error) {
     console.error('Add Schedule Error:', error);
@@ -53,6 +55,7 @@ export const updateSchedule = async (id: string, updatedData: Partial<Schedule>)
       .eq('id', id);
 
     if (error) throw error;
+    notifyDataChange();
     return true;
   } catch (error) {
     console.error('Update Schedule Error:', error);
@@ -68,6 +71,7 @@ export const deleteSchedule = async (id: string): Promise<boolean> => {
       .eq('id', id);
 
     if (error) throw error;
+    notifyDataChange();
     return true;
   } catch (error) {
     console.error('Delete Schedule Error:', error);

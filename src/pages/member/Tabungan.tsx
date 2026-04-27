@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
-import { getTransactions } from '../../services/transactionService';
+import { getTransactions, addTransaction, deleteTransaction } from '../../services/transactionService';
 import { getMembers } from '../../services/memberService';
+import { subscribeToDataChange } from '../../services/refreshService';
 import type { Transaction } from '../../types/transaction';
 import type { Member } from '../../types/member';
 import { 
@@ -12,12 +13,14 @@ import {
   CreditCard,
   Camera,
   Send,
-  Info
+  Info,
+  Image as ImageIcon
 } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
-import { addTransaction, deleteTransaction } from '../../services/transactionService';
 import clsx from 'clsx';
+import { toast } from 'sonner';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 
 export const Tabungan: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -34,6 +37,12 @@ export const Tabungan: React.FC = () => {
   const [depositAmount, setDepositAmount] = useState('');
   const [depositProof, setDepositProof] = useState<string | null>(null);
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
+  const [cancelConfirm, setCancelConfirm] = useState<{ isOpen: boolean; id: string; amount: number }>({
+    isOpen: false,
+    id: '',
+    amount: 0
+  });
   
   const memberId = localStorage.getItem('member_id');
 
@@ -52,6 +61,13 @@ export const Tabungan: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+
+    // Subscribe to real-time changes
+    const unsubscribe = subscribeToDataChange(() => {
+      fetchData();
+    });
+
+    return () => unsubscribe();
   }, [memberId]);
 
   const handleDepositSubmit = async (e: React.FormEvent) => {
@@ -59,7 +75,7 @@ export const Tabungan: React.FC = () => {
     if (!memberId || !depositAmount || !depositProof) return;
 
     setIsSubmitting(true);
-    const success = await addTransaction({
+    const promise = addTransaction({
       member_id: memberId,
       type: 'setoran',
       amount: Number(depositAmount),
@@ -68,15 +84,21 @@ export const Tabungan: React.FC = () => {
       proof_url: depositProof,
     });
 
-    if (success) {
-      alert('Request setoran berhasil dikirim. Menunggu verifikasi admin.');
-      setIsDepositFormOpen(false);
-      setDepositAmount('');
-      setDepositProof(null);
-      await fetchData();
-    } else {
-      alert('Gagal mengirim request.');
-    }
+    toast.promise(promise, {
+      loading: 'Mengirim request setoran...',
+      success: (res) => {
+        if (res) {
+          setIsDepositFormOpen(false);
+          setDepositAmount('');
+          setDepositProof(null);
+          fetchData();
+          return 'Request setoran berhasil dikirim. Menunggu verifikasi admin.';
+        }
+        throw new Error('Gagal mengirim');
+      },
+      error: 'Terjadi kesalahan sistem'
+    });
+
     setIsSubmitting(false);
   };
 
@@ -85,12 +107,12 @@ export const Tabungan: React.FC = () => {
     if (!memberId || !withdrawAmount) return;
 
     if (Number(withdrawAmount) > (member?.totalBalance || 0)) {
-      alert('Saldo tidak mencukupi!');
+      toast.error('Saldo tidak mencukupi!');
       return;
     }
 
     setIsSubmitting(true);
-    const success = await addTransaction({
+    const promise = addTransaction({
       member_id: memberId,
       type: 'penarikan',
       amount: Number(withdrawAmount),
@@ -99,27 +121,44 @@ export const Tabungan: React.FC = () => {
       proof_url: '',
     });
 
-    if (success) {
-      alert('Request penarikan berhasil dikirim. Menunggu verifikasi admin.');
-      setIsWithdrawFormOpen(false);
-      setWithdrawAmount('');
-      await fetchData();
-    } else {
-      alert('Gagal mengirim request.');
-    }
+    toast.promise(promise, {
+      loading: 'Mengirim request penarikan...',
+      success: (res) => {
+        if (res) {
+          setIsWithdrawFormOpen(false);
+          setWithdrawAmount('');
+          fetchData();
+          return 'Request penarikan berhasil dikirim. Menunggu verifikasi admin.';
+        }
+        throw new Error('Gagal mengirim');
+      },
+      error: 'Terjadi kesalahan sistem'
+    });
+
     setIsSubmitting(false);
   };
 
-  const handleCancelWithdrawal = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin membatalkan request penarikan ini?')) return;
-    
-    const success = await deleteTransaction(id);
-    if (success) {
-      alert('Request penarikan berhasil dibatalkan.');
-      await fetchData();
-    } else {
-      alert('Gagal membatalkan request.');
+  const handleCancelWithdrawal = (id: string) => {
+    const tx = transactions.find(t => t.id === id);
+    if (tx) {
+      setCancelConfirm({ isOpen: true, id: tx.id, amount: tx.amount });
     }
+  };
+
+  const confirmCancelWithdrawal = async () => {
+    const { id, amount } = cancelConfirm;
+    setCancelConfirm(prev => ({ ...prev, isOpen: false }));
+    
+    const promise = deleteTransaction(id);
+
+    toast.promise(promise, {
+      loading: 'Membatalkan request...',
+      success: () => {
+        fetchData();
+        return `Request penarikan ${formatCurrency(amount)} berhasil dibatalkan`;
+      },
+      error: 'Gagal membatalkan request'
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -141,9 +180,6 @@ export const Tabungan: React.FC = () => {
     }).format(amount);
   };
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-[400px] text-gray-400">Memuat data...</div>;
-  }
 
   return (
     <div className="space-y-6">
@@ -213,6 +249,7 @@ export const Tabungan: React.FC = () => {
                 <tr className="bg-white border-b border-gray-100">
                   <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tanggal</th>
                   <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Nominal</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Bukti</th>
                   <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Status</th>
                 </tr>
               </thead>
@@ -228,6 +265,20 @@ export const Tabungan: React.FC = () => {
                       <p className="text-sm font-black text-gray-900">
                         {formatCurrency(tx.amount).replace('Rp', '').trim()}
                       </p>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      {tx.proof_url ? (
+                        <button 
+                          onClick={() => setSelectedProofUrl(tx.proof_url || null)}
+                          className="px-2 py-1 bg-blue-50 border border-blue-100 text-blue-600 hover:bg-blue-100 rounded-md transition-colors inline-flex items-center gap-1.5"
+                          title="Lihat Bukti"
+                        >
+                          <ImageIcon size={12} />
+                          <span className="text-[10px] font-bold">Lihat</span>
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-gray-300">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-4 text-right">
                       <span className={clsx(
@@ -263,6 +314,7 @@ export const Tabungan: React.FC = () => {
                 <tr className="bg-white border-b border-gray-100">
                   <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tanggal</th>
                   <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Nominal</th>
+                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Bukti</th>
                   <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Aksi</th>
                   <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Status</th>
                 </tr>
@@ -279,6 +331,20 @@ export const Tabungan: React.FC = () => {
                       <p className="text-sm font-black text-red-700">
                         -{formatCurrency(tx.amount).replace('Rp', '').trim()}
                       </p>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      {tx.proof_url ? (
+                        <button 
+                          onClick={() => setSelectedProofUrl(tx.proof_url || null)}
+                          className="px-2 py-1 bg-blue-50 border border-blue-100 text-blue-600 hover:bg-blue-100 rounded-md transition-colors inline-flex items-center gap-1.5"
+                          title="Lihat Bukti"
+                        >
+                          <ImageIcon size={12} />
+                          <span className="text-[10px] font-bold">Lihat</span>
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-gray-300">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-4 text-center">
                       {tx.status === 'pending' ? (
@@ -413,9 +479,9 @@ export const Tabungan: React.FC = () => {
           <Button 
             type="submit"
             className="w-full font-bold gap-2 py-3"
-            disabled={isSubmitting}
+            isLoading={isSubmitting}
           >
-            <Send size={18} /> {isSubmitting ? 'Mengirim...' : 'Kirim Bukti Setoran'}
+            <Send size={18} /> Kirim Bukti Setoran
           </Button>
         </form>
       </Modal>
@@ -492,11 +558,57 @@ export const Tabungan: React.FC = () => {
           <Button 
             type="submit"
             className="w-full font-bold gap-2 py-4 shadow-lg shadow-red-700/20 active:scale-95 transition-all"
-            disabled={isSubmitting}
+            isLoading={isSubmitting}
           >
-            <Send size={18} /> {isSubmitting ? 'Mengirim...' : 'Konfirmasi & Kirim Request'}
+            <Send size={18} /> Konfirmasi & Kirim Request
           </Button>
         </form>
+      </Modal>
+      <ConfirmDialog
+        isOpen={cancelConfirm.isOpen}
+        onClose={() => setCancelConfirm({ ...cancelConfirm, isOpen: false })}
+        onConfirm={confirmCancelWithdrawal}
+        title="Batalkan Request"
+        message={`Apakah Anda yakin ingin membatalkan permintaan penarikan dana sebesar ${formatCurrency(cancelConfirm.amount)}?`}
+        confirmText="Ya, Batalkan"
+        variant="warning"
+      />
+
+      {/* 3. Image Preview Modal */}
+      <Modal
+        isOpen={!!selectedProofUrl}
+        onClose={() => setSelectedProofUrl(null)}
+        title="Bukti Transfer"
+        maxWidth="lg"
+      >
+        {selectedProofUrl && (
+          <div className="space-y-4">
+            <div className="p-2 bg-gray-50 rounded-xl border border-gray-100">
+              <img 
+                src={selectedProofUrl} 
+                alt="Bukti Transfer Detail" 
+                className="w-full h-auto max-h-[60vh] object-contain rounded-lg shadow-sm mx-auto"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button 
+                className="flex-1 font-bold text-xs py-3"
+                onClick={() => setSelectedProofUrl(null)}
+              >
+                Tutup Preview
+              </Button>
+              <a 
+                href={selectedProofUrl} 
+                download={`Bukti_Transfer_${new Date().getTime()}.png`}
+                className="flex-1"
+              >
+                <Button variant="outline" className="w-full font-bold text-xs py-3 border-gray-200">
+                  Unduh Gambar
+                </Button>
+              </a>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

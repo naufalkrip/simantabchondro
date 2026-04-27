@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import clsx from 'clsx';
-
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { Minus, Check, X, Users, CreditCard, Info, Plus } from 'lucide-react';
+import { Minus, Check, X, Users, CreditCard, Info, Plus, Image as ImageIcon } from 'lucide-react';
 import { getTransactions, updateTransactionStatus } from '../../services/transactionService';
 import { getMembers } from '../../services/memberService';
+import { subscribeToDataChange } from '../../services/refreshService';
 import type { Transaction } from '../../types/transaction';
 import type { Member } from '../../types/member';
+import { toast } from 'sonner';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 
 export const Penarikan: React.FC = () => {
   const [pendingRequests, setPendingRequests] = useState<Transaction[]>([]);
@@ -22,6 +24,11 @@ export const Penarikan: React.FC = () => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [confirmingRequestId, setConfirmingRequestId] = useState<string | null>(null);
   const [tempProofUrl, setTempProofUrl] = useState<string | null>(null);
+  const [rejectConfirm, setRejectConfirm] = useState<{ isOpen: boolean; id: string; name: string }>({
+    isOpen: false,
+    id: '',
+    name: ''
+  });
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -38,6 +45,13 @@ export const Penarikan: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+
+    // Subscribe to real-time changes
+    const unsubscribe = subscribeToDataChange(() => {
+      fetchData();
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,6 +60,7 @@ export const Penarikan: React.FC = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setTempProofUrl(reader.result as string);
+        toast.success('Bukti transfer terpilih');
       };
       reader.readAsDataURL(file);
     }
@@ -57,23 +72,38 @@ export const Penarikan: React.FC = () => {
     setIsConfirmModalOpen(true);
   };
 
+  const openRejectModal = (id: string, name: string) => {
+    setRejectConfirm({ isOpen: true, id, name });
+  };
+
+  const confirmReject = async () => {
+    const { id } = rejectConfirm;
+    setRejectConfirm(prev => ({ ...prev, isOpen: false }));
+    handleProcessRequest(id, 'rejected');
+  };
+
   const handleProcessRequest = async (id: string, status: 'approved' | 'rejected', proof?: string) => {
     if (status === 'approved' && !proof) {
-      alert('Harap unggah bukti transfer terlebih dahulu.');
+      toast.error('Harap unggah bukti transfer terlebih dahulu');
       return;
     }
-
-    if (!confirm(`Apakah Anda yakin ingin ${status === 'approved' ? 'menyetujui dan mencairkan' : 'menolak'} permintaan penarikan ini?`)) return;
     
     setIsSubmitting(true);
-    const success = await updateTransactionStatus(id, status, proof);
-    if (success) {
-      alert(`Penarikan berhasil ${status === 'approved' ? 'disetujui' : 'ditolak'}.`);
-      setIsConfirmModalOpen(false);
-      await fetchData();
-    } else {
-      alert('Gagal memproses permintaan.');
-    }
+    const promise = updateTransactionStatus(id, status, proof);
+
+    toast.promise(promise, {
+      loading: status === 'approved' ? 'Menyetujui penarikan...' : 'Menolak penarikan...',
+      success: (res) => {
+        if (res) {
+          setIsConfirmModalOpen(false);
+          fetchData();
+          return `Penarikan berhasil ${status === 'approved' ? 'disetujui' : 'ditolak'}`;
+        }
+        throw new Error('Gagal memproses');
+      },
+      error: 'Terjadi kesalahan sistem'
+    });
+
     setIsSubmitting(false);
   };
 
@@ -90,22 +120,22 @@ export const Penarikan: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-4 border-b border-gray-200 rounded-md shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-800">Verifikasi Penarikan</h2>
-        <p className="text-xs text-gray-500 mt-0.5">Setujui permintaan pencairan saldo tabungan anggota</p>
+      <div className="bg-white p-3 md:p-4 border-b border-gray-200 rounded-xl shadow-sm">
+        <h2 className="text-base md:text-lg font-semibold text-gray-800">Verifikasi Penarikan</h2>
+        <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">Setujui permintaan pencairan saldo tabungan anggota</p>
       </div>
 
       {isLoading ? (
         <div className="py-12 text-center text-gray-400">Memuat data...</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {pendingRequests.length > 0 ? pendingRequests.map(req => (
-            <Card key={req.id} className="overflow-hidden flex flex-col">
+            <Card key={req.id} className="overflow-hidden flex flex-col rounded-xl">
               <div className="p-4 space-y-4 flex-1">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-600">
-                      <Minus size={20} />
+                    <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-red-50 flex items-center justify-center text-red-600">
+                      <Minus size={18} className="md:size-5" />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-gray-900">{req.member?.name}</p>
@@ -116,18 +146,18 @@ export const Penarikan: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="p-3 bg-red-50/50 rounded-lg border border-red-100">
+                <div className="p-3 bg-red-50/50 rounded-xl border border-red-100">
                   <p className="text-[10px] font-bold text-red-400 uppercase mb-1">Jumlah Penarikan</p>
-                  <p className="text-xl font-black text-red-700">{formatCurrency(req.amount)}</p>
+                  <p className="text-lg md:text-xl font-black text-red-700">{formatCurrency(req.amount)}</p>
                 </div>
 
                 <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Data Rekening</p>
-                    <CreditCard size={14} className="text-gray-300" />
+                    <CreditCard size={12} className="text-gray-300 md:size-[14px]" />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-bold text-gray-800">{req.member?.name}</p>
+                    <p className="text-[13px] md:text-xs font-bold text-gray-800">{req.member?.name}</p>
                     <button 
                       onClick={() => setSelectedMemberId(req.member_id)}
                       className="text-[10px] font-black text-blue-600 flex items-center gap-1 hover:underline"
@@ -137,57 +167,60 @@ export const Penarikan: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-2">
-                  <Info className="text-blue-500 shrink-0" size={16} />
+                <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl flex gap-2">
+                  <Info className="text-blue-500 shrink-0" size={14} className="md:size-4" />
                   <p className="text-[10px] text-blue-700 leading-relaxed font-medium">
                     Pastikan Anda telah mentransfer dana ke rekening anggota sebelum menyetujui request ini.
                   </p>
                 </div>
               </div>
 
-              <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-2">
+              <div className="p-3 md:p-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-2">
                 <Button 
-                  className="flex-1 bg-green-600 hover:bg-green-700 font-bold text-xs gap-2"
+                  className="w-full sm:flex-1 bg-green-600 hover:bg-green-700 font-bold text-[11px] md:text-xs gap-2 h-10"
                   onClick={() => openConfirmModal(req.id)}
-                  disabled={isSubmitting}
+                  isLoading={isSubmitting}
                 >
                   <Check size={14} /> Setujui & Cairkan
                 </Button>
                 <Button 
                   variant="outline"
-                  className="flex-1 border-red-200 text-red-700 hover:bg-red-50 font-bold text-xs gap-2"
-                  onClick={() => handleProcessRequest(req.id, 'rejected')}
-                  disabled={isSubmitting}
+                  className="w-full sm:flex-1 border-red-200 text-red-700 hover:bg-red-50 font-bold text-[11px] md:text-xs gap-2 h-10"
+                  onClick={() => openRejectModal(req.id, req.member?.name || 'Anggota')}
+                  isLoading={isSubmitting}
                 >
                   <X size={14} /> Tolak
                 </Button>
               </div>
             </Card>
           )) : (
-            <div className="col-span-full py-20 text-center bg-white rounded-xl border-2 border-dashed border-gray-100">
-              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
-                <Check size={32} />
+            <div className="col-span-full py-8 md:py-20 text-center bg-white rounded-xl border-2 border-dashed border-gray-100">
+              <div className="w-10 h-10 md:w-16 md:h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-300">
+                <Check size={20} className="md:size-8" />
               </div>
-              <h3 className="text-gray-900 font-bold">Semua Selesai!</h3>
-              <p className="text-gray-400 text-sm">Tidak ada permintaan penarikan yang perlu diproses.</p>
+              <h3 className="text-gray-900 font-bold text-xs md:text-base">Semua Selesai!</h3>
+              <p className="text-gray-400 text-[10px] md:text-sm">Tidak ada permintaan penarikan yang perlu diproses.</p>
             </div>
           )}
         </div>
       )}
 
       {/* History Table */}
-      <div className="bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden">
+      {/* History Table / Card List */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/30">
           <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Riwayat Verifikasi Penarikan</h3>
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Desktop View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/50 text-gray-400 text-[10px] uppercase border-b border-gray-100 font-black tracking-widest">
                 <th className="px-4 py-3">Anggota</th>
                 <th className="px-4 py-3">Tanggal</th>
                 <th className="px-4 py-3">Nominal</th>
-                <th className="px-4 py-3">Bukti TF</th>
+                <th className="px-4 py-3">Bukti</th>
                 <th className="px-4 py-3 text-right">Status</th>
               </tr>
             </thead>
@@ -205,9 +238,10 @@ export const Penarikan: React.FC = () => {
                           setTempProofUrl(tx.proof_url || null);
                           setIsConfirmModalOpen(true);
                         }}
-                        className="text-[10px] font-black text-blue-600 hover:underline flex items-center gap-1"
+                        className="px-2 py-1 bg-blue-50 border border-blue-100 text-blue-600 hover:bg-blue-100 rounded-md transition-colors inline-flex items-center gap-1.5"
                       >
-                        Lihat Bukti
+                        <ImageIcon size={12} />
+                        <span className="text-[10px] font-bold">Lihat</span>
                       </button>
                     ) : '-'}
                   </td>
@@ -227,6 +261,48 @@ export const Penarikan: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {history.length > 0 ? history.slice(0, 20).map((tx) => (
+            <div key={tx.id} className="p-4 space-y-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[13px] font-bold text-gray-900 leading-tight">{tx.member?.name}</p>
+                  <p className="text-[10px] text-gray-400 mt-1 uppercase font-medium">{tx.date}</p>
+                </div>
+                <span className={clsx(
+                  "px-2 py-0.5 rounded-sm text-[9px] font-black uppercase border",
+                  tx.status === 'approved' ? "bg-green-50 text-green-600 border-green-100" : "bg-red-50 text-red-600 border-red-100"
+                )}>
+                  {tx.status}
+                </span>
+              </div>
+              
+              <div className="flex justify-between items-center bg-gray-50/50 p-2 rounded-lg">
+                <div>
+                  <p className="text-[9px] text-gray-400 uppercase font-black tracking-widest leading-none mb-1">Nominal</p>
+                  <p className="text-sm font-black text-red-700">{formatCurrency(tx.amount)}</p>
+                </div>
+                {tx.proof_url && (
+                  <button 
+                    onClick={() => {
+                      setConfirmingRequestId(tx.id);
+                      setTempProofUrl(tx.proof_url || null);
+                      setIsConfirmModalOpen(true);
+                    }}
+                    className="px-2 py-1 bg-blue-50 border border-blue-100 text-blue-600 hover:bg-blue-100 rounded-md transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <ImageIcon size={12} />
+                    <span className="text-[10px] font-bold">Lihat</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )) : (
+            <div className="px-4 py-8 text-center text-gray-400 text-xs italic">Belum ada riwayat verifikasi</div>
+          )}
         </div>
       </div>
 
@@ -293,10 +369,11 @@ export const Penarikan: React.FC = () => {
           <div className="pt-4 flex gap-3">
             <Button 
               className="flex-1 bg-green-600 hover:bg-green-700 font-bold text-xs py-3"
-              disabled={!tempProofUrl || isSubmitting}
+              isLoading={isSubmitting}
+              disabled={!tempProofUrl}
               onClick={() => confirmingRequestId && handleProcessRequest(confirmingRequestId, 'approved', tempProofUrl || undefined)}
             >
-              {isSubmitting ? 'Memproses...' : 'Konfirmasi & Selesaikan'}
+              Konfirmasi & Selesaikan
             </Button>
             <Button 
               variant="outline" 
@@ -348,6 +425,13 @@ export const Penarikan: React.FC = () => {
           </Button>
         </div>
       </Modal>
+      <ConfirmDialog
+        isOpen={rejectConfirm.isOpen}
+        onClose={() => setRejectConfirm({ ...rejectConfirm, isOpen: false })}
+        onConfirm={confirmReject}
+        title="Tolak Penarikan"
+        message={`Apakah Anda yakin ingin menolak permintaan penarikan dari "${rejectConfirm.name}"?`}
+      />
     </div>
   );
 };

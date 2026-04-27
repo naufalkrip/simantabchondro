@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { RefreshCw, Eye, EyeOff } from 'lucide-react';
 import logo from '../../assets/logo.png';
+import { toast } from 'sonner';
 
 export const MemberLogin: React.FC = () => {
   const [phone, setPhone] = useState('');
@@ -12,7 +13,7 @@ export const MemberLogin: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [captchaAnswer, setCaptchaAnswer] = useState('');
   const [captchaCode, setCaptchaCode] = useState('');
-  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -36,44 +37,51 @@ export const MemberLogin: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
 
     if (captchaAnswer.toUpperCase() !== captchaCode) {
-      setError('CAPTCHA salah. Silakan coba lagi.');
+      toast.error('CAPTCHA salah. Silakan coba lagi.');
       generateCaptcha();
       setCaptchaAnswer('');
       return;
     }
 
     if (!phone || !password) {
-      setError('Nomor Telepon dan Password harus diisi.');
+      toast.error('Nomor Telepon dan Password harus diisi.');
       return;
     }
 
-    // New Login Logic
-    const { getMembers } = await import('../../services/memberService');
-    const members = await getMembers();
-    
-    // Find member by phone number
-    const member = members.find(m => m.phone === phone);
+    setIsLoading(true);
+    try {
+      // New Login Logic
+      const { getMembers } = await import('../../services/memberService');
+      const members = await getMembers();
+      
+      // Find member by phone number
+      const member = members.find(m => m.phone === phone);
 
-    if (!member) {
-      setError('Nomor telepon tidak terdaftar.');
-      return;
+      if (!member) {
+        toast.error('Nomor telepon tidak terdaftar.');
+        return;
+      }
+
+      // Check password (default 111 as requested)
+      if (password !== '111' && password !== member.password) {
+        toast.error('Password salah.');
+        return;
+      }
+
+      // Store member info for the portal
+      localStorage.setItem('member_id', member.id);
+      localStorage.setItem('member_name', member.name);
+      
+      toast.success(`Selamat datang kembali, ${member.name}!`);
+      login(`member-token-${member.id}`, 'member');
+      navigate('/member/dashboard');
+    } catch (err) {
+      toast.error('Gagal melakukan login. Periksa koneksi internet Anda.');
+    } finally {
+      setIsLoading(false);
     }
-
-    // Check password (default 111 as requested)
-    if (password !== '111' && password !== member.password) {
-      setError('Password salah.');
-      return;
-    }
-
-    // Store member info for the portal
-    localStorage.setItem('member_id', member.id);
-    localStorage.setItem('member_name', member.name);
-    
-    login(`member-token-${member.id}`, 'member');
-    navigate('/member/dashboard');
   };
 
   return (
@@ -152,9 +160,8 @@ export const MemberLogin: React.FC = () => {
             </div>
           </div>
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
 
-          <Button type="submit" className="w-full" size="lg">
+          <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>
             Masuk
           </Button>
         </form>

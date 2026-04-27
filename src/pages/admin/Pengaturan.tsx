@@ -7,10 +7,10 @@ import {
   Building2, 
   UserCircle, 
   Edit3, 
-  CheckCircle2,
   KeyRound,
   ShieldCheck
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export const Pengaturan: React.FC = () => {
   // Data State
@@ -32,9 +32,6 @@ export const Pengaturan: React.FC = () => {
     bankName: '',
     accountNumber: '',
     accountHolder: ''});
-
-  // Status message
-  const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   useEffect(() => {
     // Load data from localStorage on mount
@@ -63,9 +60,9 @@ export const Pengaturan: React.FC = () => {
     setAdminPassword(formPassword);
     
     setIsEditAccountOpen(false);
-    showStatus('success', 'Informasi akun admin berhasil diperbarui.');
-    // Force sidebar update by triggering storage event or just local state if they were in same context
-    window.dispatchEvent(new Event('storage'));};
+    toast.success('Informasi akun admin berhasil diperbarui');
+    window.dispatchEvent(new Event('storage'));
+  };
 
   const handleSaveBank = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,11 +70,8 @@ export const Pengaturan: React.FC = () => {
     setBankInfo(formBank);
     
     setIsEditBankOpen(false);
-    showStatus('success', 'Informasi rekening admin berhasil diperbarui.');};
-
-  const showStatus = (type: 'success' | 'error', message: string) => {
-    setStatus({ type, message });
-    setTimeout(() => setStatus(null), 3000);};
+    toast.success('Informasi rekening admin berhasil diperbarui');
+  };
 
   return (
     <div className="space-y-6">
@@ -88,13 +82,6 @@ export const Pengaturan: React.FC = () => {
         </div>
       </div>
 
-      {status && (
-        <div className={`p-3 rounded-md flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 ${
-          status.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
-          <CheckCircle2 size={18} />
-          <span className="text-xs font-medium">{status.message}</span>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 gap-4">
         {/* Account Info Table Section - Flat Style */}
@@ -109,7 +96,7 @@ export const Pengaturan: React.FC = () => {
             <Button 
               variant="outline" 
               size="sm" 
-              className="px-3 py-1.5 text-xs font-bold  border-gray-200 text-gray-600 hover:text-red-700 hover:border-red-100 rounded-md"
+              className="px-3 py-1.5 text-xs font-bold  border-gray-200 text-gray-600 hover:text-blue-700 hover:border-blue-100 rounded-md"
               onClick={() => {
                 setFormUsername(adminUsername);
                 setFormPassword(adminPassword);

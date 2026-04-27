@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
+import { Modal } from '../../components/ui/Modal';
+import { Button } from '../../components/ui/Button';
 import { getAttendanceByDateRange } from '../../services/attendanceService';
 import { getTransactions } from '../../services/transactionService';
 import { getMembers } from '../../services/memberService';
+import { subscribeToDataChange } from '../../services/refreshService';
 import type { Attendance } from '../../types/attendance';
 import type { Transaction } from '../../types/transaction';
 import type { Member } from '../../types/member';
@@ -14,7 +17,8 @@ import {
   CheckCircle2, 
   Clock, 
   XCircle,
-  UserCircle 
+  UserCircle,
+  Image as ImageIcon
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -23,8 +27,10 @@ export const Dashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [member, setMember] = useState<Member | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
 
   const memberId = localStorage.getItem('member_id');
+  const storedName = localStorage.getItem('member_name') || 'Anggota';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,6 +58,13 @@ export const Dashboard: React.FC = () => {
     };
 
     fetchData();
+
+    // Subscribe to real-time changes
+    const unsubscribe = subscribeToDataChange(() => {
+      fetchData();
+    });
+
+    return () => unsubscribe();
   }, [memberId]);
 
   const attendanceStats = {
@@ -73,9 +86,6 @@ export const Dashboard: React.FC = () => {
     }).format(amount);
   };
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-[400px] text-gray-400">Memuat data...</div>;
-  }
 
   return (
     <div className="space-y-6">
@@ -83,9 +93,9 @@ export const Dashboard: React.FC = () => {
       <div className="p-4 bg-gradient-to-r from-red-700 to-red-900 text-white shadow-sm rounded-md overflow-hidden relative group">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold mb-0.5">Halo, {member?.name || 'Anggota'}! 👋</h3>
+            <h3 className="text-lg font-semibold mb-0.5">Halo. {member?.name || storedName}! 👋</h3>
             <p className="text-red-50/80 text-xs max-w-xl leading-relaxed">
-              Selamat datang di portal informasi SIMANTAB. Pantau data kehadiran, tabungan, dan informasi latihan Anda di sini.
+              Selamat datang di portal informasi SIMANTAB. Pantau data kehadiran, tabungan, dan informasi tampilan Anda di sini.
             </p>
           </div>
           <div className="flex gap-4 shrink-0">
@@ -220,12 +230,22 @@ export const Dashboard: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                   <span className={clsx(
-                    "text-[10px] font-black uppercase px-2 py-0.5 rounded-sm",
-                    tx.type === 'setoran' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                  )}>
-                    {tx.type}
-                  </span>
+                    <span className={clsx(
+                      "text-[10px] font-black uppercase px-2 py-0.5 rounded-sm",
+                      tx.type === 'setoran' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                    )}>
+                      {tx.type}
+                    </span>
+                    {tx.proof_url && (
+                      <button 
+                        onClick={() => setSelectedProofUrl(tx.proof_url || null)}
+                        className="ml-2 px-2 py-1 bg-blue-50 border border-blue-100 text-blue-600 hover:bg-blue-100 rounded-md transition-colors flex items-center gap-1.5"
+                        title="Lihat Bukti Transfer"
+                      >
+                        <ImageIcon size={12} />
+                        <span className="text-[10px] font-bold">Lihat</span>
+                      </button>
+                    )}
                 </div>
               </div>
             )) : (
@@ -234,6 +254,43 @@ export const Dashboard: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* Image Preview Modal */}
+      <Modal
+        isOpen={!!selectedProofUrl}
+        onClose={() => setSelectedProofUrl(null)}
+        title="Bukti Transfer"
+        maxWidth="lg"
+      >
+        {selectedProofUrl && (
+          <div className="space-y-4">
+            <div className="p-2 bg-gray-50 rounded-xl border border-gray-100">
+              <img 
+                src={selectedProofUrl} 
+                alt="Bukti Transfer Detail" 
+                className="w-full h-auto max-h-[60vh] object-contain rounded-lg shadow-sm mx-auto"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button 
+                className="flex-1 font-bold text-xs py-3"
+                onClick={() => setSelectedProofUrl(null)}
+              >
+                Tutup Preview
+              </Button>
+              <a 
+                href={selectedProofUrl} 
+                download={`Bukti_Transfer_${new Date().getTime()}.png`}
+                className="flex-1"
+              >
+                <Button variant="outline" className="w-full font-bold text-xs py-3 border-gray-200">
+                  Unduh Gambar
+                </Button>
+              </a>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

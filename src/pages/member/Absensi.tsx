@@ -48,9 +48,6 @@ export const Absensi: React.FC = () => {
     ? Math.round((stats.hadir / stats.total) * 100) 
     : 0;
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-[400px] text-gray-400">Memuat data...</div>;
-  }
 
   return (
     <div className="space-y-6">
@@ -72,7 +69,7 @@ export const Absensi: React.FC = () => {
           </div>
           <div>
             <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest">Hadir</p>
-            <h4 className="text-xl font-black text-gray-900">{stats.hadir} Hari</h4>
+            <h4 className="text-xl font-black text-gray-900">{stats.hadir} Tampilan</h4>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-4 bg-yellow-50/30 border-yellow-100">
@@ -81,7 +78,7 @@ export const Absensi: React.FC = () => {
           </div>
           <div>
             <p className="text-[10px] font-bold text-yellow-600 uppercase tracking-widest">Izin</p>
-            <h4 className="text-xl font-black text-gray-900">{stats.izin} Hari</h4>
+            <h4 className="text-xl font-black text-gray-900">{stats.izin} Tampilan</h4>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-4 bg-red-50/30 border-red-100">
@@ -90,7 +87,7 @@ export const Absensi: React.FC = () => {
           </div>
           <div>
             <p className="text-[10px] font-bold text-red-600 uppercase tracking-widest">Tanpa Keterangan</p>
-            <h4 className="text-xl font-black text-gray-900">{stats.bolos} Hari</h4>
+            <h4 className="text-xl font-black text-gray-900">{stats.bolos} Tampilan</h4>
           </div>
         </Card>
       </div>

@@ -4,6 +4,7 @@ import { getMembers } from '../../services/memberService';
 import { getAttendanceByDate, saveAttendance } from '../../services/attendanceService';
 import type { Member } from '../../types/member';
 import { ArrowUpDown, Calendar as CalendarIcon } from 'lucide-react';
+import { toast } from 'sonner';
 
 export const Absensi: React.FC = () => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -71,12 +72,16 @@ export const Absensi: React.FC = () => {
       location: location
     }));
 
-    const success = await saveAttendance(recordsToSave);
-    if (success) {
-      alert('Data absensi berhasil disimpan!');
-    } else {
-      alert('Gagal menyimpan absensi.');
-    }
+    const promise = saveAttendance(recordsToSave);
+
+    toast.promise(promise, {
+      loading: 'Menyimpan data absensi...',
+      success: (res) => {
+        if (res) return 'Data absensi berhasil disimpan';
+        throw new Error('Gagal menyimpan');
+      },
+      error: 'Terjadi kesalahan sistem'
+    });
 
     setIsSaving(false);
   };
@@ -87,8 +92,8 @@ export const Absensi: React.FC = () => {
     const first = newOrder.shift()!;
     newOrder.push(first);
     setDivisionOrder(newOrder);
+    toast.info(`Urutan divisi dirotasi`);
   };
-
 
   return (
     <div className="space-y-6">
@@ -126,18 +131,19 @@ export const Absensi: React.FC = () => {
           <div className="md:col-span-3">
             <Button
               onClick={handleSave}
-              disabled={isSaving}
+              isLoading={isSaving}
               variant="primary"
               className="w-full h-[34px] text-xs font-bold  rounded-md"
             >
-              {isSaving ? 'Menyimpan...' : 'Simpan Absensi'}
+              Simpan Absensi
             </Button>
           </div>
         </div>
       </div>
 
       {/* Simplified Unified Attendance Table - Flat Style */}
-      <div className="bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden mb-8">
+      {/* Desktop View Table */}
+      <div className="hidden md:block bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden mb-8">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -185,6 +191,46 @@ export const Absensi: React.FC = () => {
                 ));})}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Mobile View Card List */}
+      <div className="md:hidden space-y-3 mb-8">
+        <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Urutkan Divisi</p>
+          <button
+            onClick={rotateDivisionOrder}
+            className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-md text-[10px] font-bold border border-red-100"
+          >
+            <ArrowUpDown size={10} /> Putar Urutan
+          </button>
+        </div>
+        
+        <div className="divide-y divide-gray-100 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+          {divisionOrder.map((div) => {
+            const divMembers = members.filter(m => m.divisi === div);
+            return divMembers.map((member) => (
+              <div key={member?.id} className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-[13px] font-bold text-gray-900 leading-tight">{member?.name}</p>
+                  <p className="text-[10px] text-gray-400 mt-1 uppercase font-medium">{member?.divisi}</p>
+                </div>
+                <select
+                  className={`px-3 py-1.5 border rounded-lg text-[11px] font-bold outline-none transition-all cursor-pointer ${
+                    (attendance[member.id] || 'hadir') === 'hadir' ? 'bg-green-50 text-green-700 border-green-200' :
+                    (attendance[member.id] || 'hadir') === 'izin' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                    'bg-red-50 text-red-700 border-red-200'
+                  }`}
+                  value={attendance[member.id] || 'hadir'}
+                  onChange={(e) => handleStatusChange(member.id, e.target.value as any)}
+                >
+                  <option value="hadir">Hadir</option>
+                  <option value="izin">Izin</option>
+                  <option value="bolos">Bolos</option>
+                </select>
+              </div>
+            ));
+          })}
         </div>
       </div>
     </div>

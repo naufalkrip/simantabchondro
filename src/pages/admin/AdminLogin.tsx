@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { RefreshCw, Eye, EyeOff } from 'lucide-react';
 import logo from '../../assets/logo.png';
+import { toast } from 'sonner';
 
 export const AdminLogin: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -12,7 +13,7 @@ export const AdminLogin: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [captchaAnswer, setCaptchaAnswer] = useState('');
   const [captchaCode, setCaptchaCode] = useState('');
-  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -32,28 +33,30 @@ export const AdminLogin: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
 
     if (captchaAnswer.toUpperCase() !== captchaCode) {
-      setError('CAPTCHA salah. Silakan coba lagi.');
+      toast.error('CAPTCHA salah. Silakan coba lagi.');
       generateCaptcha();
       setCaptchaAnswer('');
       return;}
 
     if (!username || !password) {
-      setError('Username dan Password harus diisi.');
+      toast.error('Username dan Password harus diisi.');
       return;}
 
+    setIsLoading(true);
     // Simulate login success (In a real app, this would be an API call)
     const savedUsername = localStorage.getItem('admin_username') || '111';
     const savedPassword = localStorage.getItem('admin_password') || '111';
     
     if (username === savedUsername && password === savedPassword) {
+      toast.success('Login berhasil! Selamat datang Admin.');
       login(`admin-token-${Date.now()}`, 'admin');
       navigate('/admin/dashboard');} else {
-      setError('Username atau Password salah.');
+      toast.error('Username atau Password salah.');
       generateCaptcha();
-      setCaptchaAnswer('');}};
+      setCaptchaAnswer('');}
+    setIsLoading(false);};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
@@ -131,9 +134,8 @@ export const AdminLogin: React.FC = () => {
             </div>
           </div>
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
 
-          <Button type="submit" className="w-full" size="lg">
+          <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>
             Masuk
           </Button>
         </form>

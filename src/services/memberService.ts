@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import type { Member } from '../types/member';
+import { notifyDataChange } from './refreshService';
 
 export const getMembers = async (): Promise<Member[]> => {
   const { data, error } = await supabase
@@ -30,6 +31,7 @@ export const getMembers = async (): Promise<Member[]> => {
 
 export const addMember = async (member: Omit<Member, 'id' | 'totalBalance'>): Promise<boolean> => {
   try {
+    console.log('Adding member to Supabase:', member);
     const { error } = await supabase
       .from('members')
       .insert([{
@@ -45,7 +47,12 @@ export const addMember = async (member: Omit<Member, 'id' | 'totalBalance'>): Pr
         total_balance: 0
       }]);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error adding member:', error);
+      throw error;
+    }
+    console.log('Member added successfully');
+    notifyDataChange();
     return true;
   } catch (error) {
     console.error('Error adding member:', error);
@@ -73,6 +80,7 @@ export const updateMember = async (id: string, updates: Partial<Member>): Promis
       .eq('id', id);
 
     if (error) throw error;
+    notifyDataChange();
     return true;
   } catch (error) {
     console.error('Error updating member:', error);
@@ -88,6 +96,7 @@ export const deleteMember = async (id: string): Promise<boolean> => {
       .eq('id', id);
 
     if (error) throw error;
+    notifyDataChange();
     return true;
   } catch (error) {
     console.error('Error deleting member:', error);

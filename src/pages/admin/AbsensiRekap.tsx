@@ -9,11 +9,13 @@ import type { Member } from '../../types/member';
 import { Calendar as CalendarIcon, FileText, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { toast } from 'sonner';
 
 export const AbsensiRekap: React.FC = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [summaryData, setSummaryData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
@@ -31,26 +33,40 @@ export const AbsensiRekap: React.FC = () => {
 
   const handleFetchSummary = async () => {
     if (!dateRange.start || !dateRange.end) {
-      alert('Pilih rentang tanggal terlebih dahulu.');
+      toast.error('Pilih rentang tanggal terlebih dahulu.');
       return;
     }
     setIsLoading(true);
-    const data = await getAttendanceByDateRange(dateRange.start, dateRange.end);
-    setSummaryData(data);
-    setIsLoading(false);
+    try {
+      const data = await getAttendanceByDateRange(dateRange.start, dateRange.end);
+      setSummaryData(data);
+      if (data.length === 0) {
+        toast.info('Tidak ada data absensi pada rentang waktu tersebut.');
+      } else {
+        toast.success(`Ditemukan ${data.length} rekaman absensi.`);
+      }
+    } catch (err) {
+      toast.error('Gagal mengambil data.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDownloadReport = async (type: 'daftar' | 'rekap') => {
     const { start, end } = dateRange;
     if (!start || !end) return;
 
-    const data = summaryData.length > 0 ? summaryData : await getAttendanceByDateRange(start, end);
-    if (data.length === 0) {
-      alert('Tidak ada data absensi pada rentang waktu tersebut.');
-      return;
-    }
+    setIsDownloading(true);
+    const toastId = toast.loading('Menyiapkan laporan PDF...');
 
     try {
+      const data = summaryData.length > 0 ? summaryData : await getAttendanceByDateRange(start, end);
+      if (data.length === 0) {
+        toast.error('Tidak ada data absensi untuk dicetak.', { id: toastId });
+        setIsDownloading(false);
+        return;
+      }
+
       const doc = new jsPDF(type === 'daftar' ? 'l' : 'p');
       const title = type === 'daftar' ? 'Laporan Daftar Absensi' : 'Laporan Rekap Absensi';
 
@@ -65,14 +81,39 @@ export const AbsensiRekap: React.FC = () => {
       doc.text(`Periode: ${start} s/d ${end}`, 14, 30);
       doc.text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, 14, 35);
 
+      // Process and sort members for report (by Division then by Attendance)
+      const sortedMembersForReport = members
+        .map(m => {
+          const mRecords = data.filter(r => r.member_id === m.id);
+          const hadir = mRecords.filter(r => r.status === 'hadir').length;
+          const izin = mRecords.filter(r => r.status === 'izin').length;
+          const bolos = mRecords.filter(r => r.status === 'bolos').length;
+          return { ...m, hadir, izin, bolos };
+        })
+        .sort((a, b) => {
+          // Primary sort: Division (A-Z)
+          if (a.divisi < b.divisi) return -1;
+          if (a.divisi > b.divisi) return 1;
+          // Secondary sort: Attendance (Hadir) Desc
+          return b.hadir - a.hadir;
+        });
+
       if (type === 'daftar') {
         const uniqueDates = Array.from(new Set(data.map(d => d.date))).sort();
-        const tableColumn = ["Nama", "Divisi", ...uniqueDates];
-        const tableRows = members.map(m => {
+        
+        // Map dates to location names
+        const dateToLocationMap: Record<string, string> = {};
+        uniqueDates.forEach(date => {
+          const record = data.find(r => r.date === date);
+          dateToLocationMap[date] = record?.location || 'Tanpa Keterangan';
+        });
+
+        const tableColumn = ["Nama", "Divisi", ...uniqueDates.map(d => dateToLocationMap[d])];
+        const tableRows = sortedMembersForReport.map(m => {
           const row = [m.name, m.divisi];
           uniqueDates.forEach(date => {
             const record = data.find(r => r.member_id === m.id && r.date === date);
-            row.push(record ? record.status.toUpperCase() : '-');
+            row.push(record ? record.status.toUpperCase().charAt(0) : '-'); // Use initial (H/I/B) to save space in landscape
           });
           return row;
         });
@@ -83,17 +124,18 @@ export const AbsensiRekap: React.FC = () => {
           startY: 45,
           styles: { fontSize: 7, cellPadding: 2, halign: 'center' },
           headStyles: { fillColor: [185, 28, 28], fontStyle: 'bold' },
-          columnStyles: { 0: { halign: 'left' }, 1: { halign: 'left' } }
+          columnStyles: { 0: { halign: 'left', cellWidth: 35 }, 1: { halign: 'left', cellWidth: 25 } }
         });
       } else {
         const tableColumn = ["No", "Nama", "Divisi", "Hadir", "Izin", "Bolos"];
-        const tableRows = members.map((m, i) => {
-          const memberRecords = data.filter(r => r.member_id === m.id);
-          const hadir = memberRecords.filter(r => r.status === 'hadir').length;
-          const izin = memberRecords.filter(r => r.status === 'izin').length;
-          const bolos = memberRecords.filter(r => r.status === 'bolos').length;
-          return [i + 1, m.name, m.divisi, hadir, izin, bolos];
-        });
+        const tableRows = sortedMembersForReport.map((m, i) => [
+          i + 1, 
+          m.name, 
+          m.divisi, 
+          m.hadir, 
+          m.izin, 
+          m.bolos
+        ]);
 
         autoTable(doc, {
           head: [tableColumn],
@@ -106,9 +148,13 @@ export const AbsensiRekap: React.FC = () => {
       }
 
       doc.save(`Laporan_Absensi_${type}_${start}_${end}.pdf`);
+      toast.success('Laporan berhasil diunduh', { id: toastId });
     } catch (error) {
       console.error('PDF Error:', error);
-      alert('Gagal membuat PDF.');
+      toast.error('Gagal membuat PDF.', { id: toastId });
+    } finally {
+      setIsDownloading(false);
+      setIsDownloadModalOpen(false);
     }
   };
 
@@ -149,8 +195,8 @@ export const AbsensiRekap: React.FC = () => {
               onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
             />
           </div>
-          <Button onClick={handleFetchSummary} disabled={isLoading} className="font-bold text-xs py-2.5">
-            {isLoading ? 'Memproses...' : 'Tampilkan Data'}
+          <Button onClick={handleFetchSummary} isLoading={isLoading} className="font-bold text-xs py-2.5">
+            Tampilkan Data
           </Button>
         </div>
       </div>
@@ -192,25 +238,35 @@ export const AbsensiRekap: React.FC = () => {
               </div>
             </div>
             <div className="divide-y divide-gray-50 max-h-[500px] overflow-y-auto">
-              {members.map(member => {
-                const mRecords = summaryData.filter(d => d.member_id === member.id);
-                const h = mRecords.filter(d => d.status === 'hadir').length;
-                const i = mRecords.filter(d => d.status === 'izin').length;
-                const b = mRecords.filter(d => d.status === 'bolos').length;
-                return (
+              {members
+                .map(member => {
+                  const mRecords = summaryData.filter(d => d.member_id === member.id);
+                  const h = mRecords.filter(d => d.status === 'hadir').length;
+                  const i = mRecords.filter(d => d.status === 'izin').length;
+                  const b = mRecords.filter(d => d.status === 'bolos').length;
+                  return { ...member, h, i, b };
+                })
+                .sort((a, b) => {
+                  if (a.divisi < b.divisi) return -1;
+                  if (a.divisi > b.divisi) return 1;
+                  return b.h - a.h;
+                }) // Sort by Division then by highest 'Hadir' count
+                .map((member, index) => (
                   <div key={member.id} className="px-6 py-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                    <div>
-                      <p className="text-sm font-bold text-gray-800">{member.name}</p>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">{member.divisi}</p>
+                    <div className="flex items-center gap-4">
+                      <span className="text-[10px] font-black text-gray-300 w-4">{index + 1}</span>
+                      <div>
+                        <p className="text-sm font-bold text-gray-800">{member.name}</p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">{member.divisi}</p>
+                      </div>
                     </div>
                     <div className="flex gap-4 font-black">
-                      <div className="w-10 text-center text-xs text-green-600 bg-green-50 py-1.5 rounded-lg border border-green-100/30">{h}</div>
-                      <div className="w-10 text-center text-xs text-yellow-600 bg-yellow-50 py-1.5 rounded-lg border border-yellow-100/30">{i}</div>
-                      <div className="w-10 text-center text-xs text-red-600 bg-red-50 py-1.5 rounded-lg border border-red-100/30">{b}</div>
+                      <div className="w-10 text-center text-xs text-green-600 bg-green-50 py-1.5 rounded-lg border border-green-100/30">{member.h}</div>
+                      <div className="w-10 text-center text-xs text-yellow-600 bg-yellow-50 py-1.5 rounded-lg border border-yellow-100/30">{member.i}</div>
+                      <div className="w-10 text-center text-xs text-red-600 bg-red-50 py-1.5 rounded-lg border border-red-100/30">{member.b}</div>
                     </div>
                   </div>
-                );
-              })}
+                ))}
             </div>
           </Card>
         </div>
@@ -232,7 +288,8 @@ export const AbsensiRekap: React.FC = () => {
         <div className="space-y-4">
           <button
             onClick={() => handleDownloadReport('daftar')}
-            className="w-full p-4 border rounded-xl hover:bg-gray-50 transition-all text-left flex items-center gap-4 group"
+            disabled={isDownloading}
+            className="w-full p-4 border rounded-xl hover:bg-gray-50 transition-all text-left flex items-center gap-4 group disabled:opacity-50"
           >
             <div className="p-3 bg-red-50 rounded-lg text-red-600 group-hover:bg-red-600 group-hover:text-white transition-colors">
               <FileText size={20} />
@@ -245,7 +302,8 @@ export const AbsensiRekap: React.FC = () => {
           
           <button
             onClick={() => handleDownloadReport('rekap')}
-            className="w-full p-4 border rounded-xl hover:bg-gray-50 transition-all text-left flex items-center gap-4 group"
+            disabled={isDownloading}
+            className="w-full p-4 border rounded-xl hover:bg-gray-50 transition-all text-left flex items-center gap-4 group disabled:opacity-50"
           >
             <div className="p-3 bg-blue-50 rounded-lg text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
               <Download size={20} />
