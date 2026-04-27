@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Users, Calendar, Drum, Wallet, Trophy, Medal } from 'lucide-react';
+import { Users, Calendar, Drum, Wallet, Trophy } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 
 import { getMembers } from '../../services/memberService';
@@ -90,7 +90,7 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-4 md:p-8 bg-white border border-gray-200 rounded-xl md:rounded-2xl shadow-sm flex items-center gap-4 md:gap-6 transition-all hover:shadow-md">
           <div className="p-3 md:p-5 rounded-xl md:rounded-2xl bg-red-50 text-red-600 shrink-0">
-            <Users size={20} className="md:size-8" />
+            <Users size={20} className="md:w-8 md:h-8" />
           </div>
           <div>
             <p className="text-[9px] md:text-xs font-black text-gray-400 uppercase tracking-widest leading-none mb-1.5 md:mb-3">Total Anggota</p>
@@ -100,7 +100,7 @@ export const Dashboard: React.FC = () => {
 
         <div className="p-4 md:p-8 bg-white border border-gray-200 rounded-xl md:rounded-2xl shadow-sm flex items-center gap-4 md:gap-6 transition-all hover:shadow-md">
           <div className="p-3 md:p-5 rounded-xl md:rounded-2xl bg-blue-50 text-blue-600 shrink-0">
-            <Calendar size={20} className="md:size-8" />
+            <Calendar size={20} className="md:w-8 md:h-8" />
           </div>
           <div>
             <p className="text-[9px] md:text-xs font-black text-gray-400 uppercase tracking-widest leading-none mb-1.5 md:mb-3">Kehadiran {currentMonthName}</p>
@@ -110,7 +110,7 @@ export const Dashboard: React.FC = () => {
 
         <div className="p-4 md:p-8 bg-white border border-gray-200 rounded-xl md:rounded-2xl shadow-sm flex items-center gap-4 md:gap-6 transition-all hover:shadow-md">
           <div className="p-3 md:p-5 rounded-xl md:rounded-2xl bg-purple-50 text-purple-600 shrink-0">
-            <Drum size={20} className="md:size-8" />
+            <Drum size={20} className="md:w-8 md:h-8" />
           </div>
           <div>
             <p className="text-[9px] md:text-xs font-black text-gray-400 uppercase tracking-widest leading-none mb-1.5 md:mb-3">Tampilan {currentMonthName}</p>

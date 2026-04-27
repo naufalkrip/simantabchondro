@@ -12,7 +12,7 @@ import clsx from 'clsx';
 
 export const Absensi: React.FC = () => {
   const [attendance, setAttendance] = useState<Attendance[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
   
   const memberId = localStorage.getItem('member_id');
 
@@ -31,7 +31,7 @@ export const Absensi: React.FC = () => {
       const myData = data.filter(a => a.member_id === memberId);
       
       setAttendance(myData);
-      setIsLoading(false);
+
     };
 
     fetchData();

@@ -135,7 +135,7 @@ export const Penarikan: React.FC = () => {
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-red-50 flex items-center justify-center text-red-600">
-                      <Minus size={18} className="md:size-5" />
+                      <Minus size={18} className="md:w-5 md:h-5" />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-gray-900">{req.member?.name}</p>
@@ -168,7 +168,7 @@ export const Penarikan: React.FC = () => {
                 </div>
 
                 <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl flex gap-2">
-                  <Info className="text-blue-500 shrink-0" size={14} className="md:size-4" />
+                  <Info className="text-blue-500 shrink-0 md:w-4 md:h-4 w-3 h-3" />
                   <p className="text-[10px] text-blue-700 leading-relaxed font-medium">
                     Pastikan Anda telah mentransfer dana ke rekening anggota sebelum menyetujui request ini.
                   </p>
@@ -196,7 +196,7 @@ export const Penarikan: React.FC = () => {
           )) : (
             <div className="col-span-full py-8 md:py-20 text-center bg-white rounded-xl border-2 border-dashed border-gray-100">
               <div className="w-10 h-10 md:w-16 md:h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-300">
-                <Check size={20} className="md:size-8" />
+                <Check size={20} className="md:w-8 md:h-8" />
               </div>
               <h3 className="text-gray-900 font-bold text-xs md:text-base">Semua Selesai!</h3>
               <p className="text-gray-400 text-[10px] md:text-sm">Tidak ada permintaan penarikan yang perlu diproses.</p>

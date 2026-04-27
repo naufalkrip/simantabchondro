@@ -39,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           className="bg-white text-red-700 hover:bg-gray-50 gap-1.5 border-none text-[12px] md:text-sm font-bold shadow-sm active:scale-95 transition-all px-3 md:px-4 h-8 md:h-9"
           onClick={logout}
         >
-          <LogOut size={14} className="md:size-4" />
+          <LogOut size={14} className="md:w-4 md:h-4" />
           <span className="hidden sm:inline">Keluar</span>
         </Button>
       </div>

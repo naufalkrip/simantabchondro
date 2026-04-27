@@ -26,7 +26,7 @@ export const Dashboard: React.FC = () => {
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [member, setMember] = useState<Member | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
   const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
 
   const memberId = localStorage.getItem('member_id');
@@ -54,7 +54,7 @@ export const Dashboard: React.FC = () => {
       setAttendance(myAttendance);
       setTransactions(myTransactions);
       setMember(myProfile);
-      setIsLoading(false);
+
     };
 
     fetchData();

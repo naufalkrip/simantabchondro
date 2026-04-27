@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 
 export const Pengaturan: React.FC = () => {
   const [member, setMember] = useState<Member | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
   const [isSaving, setIsSaving] = useState(false);
   
   // Modal State
@@ -57,7 +57,7 @@ export const Pengaturan: React.FC = () => {
         bankAccountName: myProfile.bankOwnerName || ''
       });
     }
-    setIsLoading(false);
+
   };
 
   useEffect(() => {

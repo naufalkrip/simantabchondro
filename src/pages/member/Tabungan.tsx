@@ -25,7 +25,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 export const Tabungan: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [member, setMember] = useState<Member | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modal States
@@ -56,7 +56,7 @@ export const Tabungan: React.FC = () => {
     const myProfile = membersData.find(m => m.id === memberId) || null;
     setTransactions(myTransactions);
     setMember(myProfile);
-    setIsLoading(false);
+
   };
 
   useEffect(() => {

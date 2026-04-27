@@ -92,7 +92,7 @@ export const Setoran: React.FC = () => {
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600">
-                      <Plus size={18} className="md:size-5" />
+                      <Plus size={18} className="md:w-5 md:h-5" />
                     </div>
                     <div>
                       <p className="text-sm font-bold text-gray-900">{req.member?.name}</p>
@@ -124,7 +124,7 @@ export const Setoran: React.FC = () => {
                   </div>
                 ) : (
                   <div className="h-32 md:h-40 bg-gray-50 rounded-xl border border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400">
-                    <Info size={20} className="mb-2 md:size-6" />
+                    <Info size={20} className="mb-2 md:w-6 md:h-6" />
                     <p className="text-[10px] font-bold uppercase">Tidak ada bukti foto</p>
                   </div>
                 )}
@@ -151,7 +151,7 @@ export const Setoran: React.FC = () => {
           )) : (
             <div className="col-span-full py-8 md:py-20 text-center bg-white rounded-xl border-2 border-dashed border-gray-100">
               <div className="w-10 h-10 md:w-16 md:h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-300">
-                <Check size={20} className="md:size-8" />
+                <Check size={20} className="md:w-8 md:h-8" />
               </div>
               <h3 className="text-gray-900 font-bold text-xs md:text-base">Semua Beres!</h3>
               <p className="text-gray-400 text-[10px] md:text-sm">Tidak ada antrean verifikasi setoran saat ini.</p>

@@ -11,7 +11,7 @@ import {
 
 export const Jadwal: React.FC = () => {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
 
   const fetchData = async () => {
     const data = await getSchedules();
@@ -20,7 +20,7 @@ export const Jadwal: React.FC = () => {
     // For now, let's just show all sorted by date.
     const sorted = [...data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     setSchedules(sorted);
-    setIsLoading(false);
+
   };
 
   useEffect(() => {
