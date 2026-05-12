@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { Wallet, Plus, Minus, FileText, Search, Pencil, Trash2, Calendar } from 'lucide-react';
+import { Wallet, PlusCircle, MinusCircle, FileText, Search, Pencil, Trash2, Calendar } from 'lucide-react';
 import { getMembers } from '../../services/memberService';
 import { getTransactions, addTransaction, deleteTransaction, updateTransaction } from '../../services/transactionService';
 import type { Member } from '../../types/member';
 import type { Transaction } from '../../types/transaction';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { exportModernPDF } from '../../utils/pdfExport';
+import { subscribeToDataChange } from '../../services/refreshService';
 import clsx from 'clsx';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -58,6 +58,10 @@ export const Tabungan: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    const unsubscribe = subscribeToDataChange(() => {
+      fetchData();
+    });
+    return () => unsubscribe();
   }, []);
 
   const divisions = ['Semua', ...Array.from(new Set(members.map(m => m.divisi)))];
@@ -75,26 +79,13 @@ export const Tabungan: React.FC = () => {
     });
   };
 
-  const downloadHistoryPDF = () => {
-    const doc = new jsPDF();
+  const downloadHistoryPDF = async () => {
     const filtered = getFilteredTransactions();
 
     if (filtered.length === 0) {
       toast.error('Tidak ada transaksi untuk diunduh');
       return;
     }
-
-    // Title
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.text('SIMANTAB', 14, 15);
-    doc.setFontSize(14);
-    doc.text('Riwayat Transaksi Tabungan', 14, 22);
-    
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Periode: ${startDate} s/d ${endDate}`, 14, 29);
-    doc.text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, 14, 34);
 
     const tableData = filtered.map(t => [
       t.member?.name || 'Unknown',
@@ -103,24 +94,24 @@ export const Tabungan: React.FC = () => {
       formatCurrency(t.amount).replace('Rp', '').trim()
     ]);
 
-    autoTable(doc, {
-      startY: 40,
-      head: [['Nama Anggota', 'Waktu Transaksi', 'Jenis', 'Nominal (Rp)']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [153, 1, 1], textColor: [255, 255, 255], fontStyle: 'bold' },
-      styles: { fontSize: 8, cellPadding: 3 },
-      columnStyles: {
-        3: { halign: 'right' }
-      }
-    });
-
-    doc.save(`Riwayat_Transaksi_SIMANTAB_${startDate}_to_${endDate}.pdf`);
-    toast.success('Riwayat transaksi PDF berhasil diunduh');
+    const toastId = toast.loading('Membuat dokumen PDF...');
+    try {
+      await exportModernPDF({
+        title: `Riwayat Transaksi Tabungan (Periode: ${startDate} s/d ${endDate})`,
+        filename: `Riwayat_Transaksi_SIMANTAB_${startDate}_to_${endDate}`,
+        columns: ['Nama Anggota', 'Waktu Transaksi', 'Jenis', 'Nominal (Rp)'],
+        data: tableData,
+        columnStyles: {
+          3: { halign: 'right', fontStyle: 'bold' }
+        }
+      });
+      toast.success('Riwayat transaksi PDF berhasil diunduh', { id: toastId });
+    } catch (err) {
+      toast.error('Gagal membuat laporan PDF', { id: toastId });
+    }
   };
 
-  const downloadMemberSavingsPDF = () => {
-    const doc = new jsPDF();
+  const downloadMemberSavingsPDF = async () => {
     const activeMembers = members.filter(m => (m.totalBalance || 0) > 0)
       .sort((a, b) => (b.totalBalance || 0) - (a.totalBalance || 0));
 
@@ -129,18 +120,6 @@ export const Tabungan: React.FC = () => {
       return;
     }
 
-    // Title & Header (Standardized)
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.text('SIMANTAB', 14, 15);
-    doc.setFontSize(14);
-    doc.text('Laporan Total Tabungan Anggota', 14, 22);
-    
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, 14, 29);
-    doc.text(`Total Akumulasi Saldo: ${formatCurrency(totalBalance)}`, 14, 34);
-
     const tableData = activeMembers.map((m, index) => [
       index + 1,
       m.name,
@@ -148,22 +127,32 @@ export const Tabungan: React.FC = () => {
       formatCurrency(m.totalBalance || 0).replace('Rp', '').trim()
     ]);
 
-    autoTable(doc, {
-      startY: 40,
-      head: [['No', 'Nama Anggota', 'Divisi', 'Total Saldo (Rp)']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [153, 1, 1], textColor: [255, 255, 255], fontStyle: 'bold' },
-      styles: { fontSize: 8, cellPadding: 3 }, // Fixed font size to 8 to match history
-      columnStyles: {
-        0: { halign: 'center', cellWidth: 10 },
-        2: { halign: 'center' },
-        3: { halign: 'right' }
-      }
-    });
+    // Add total row at the bottom
+    tableData.push([
+      '', 
+      'TOTAL AKUMULASI SALDO', 
+      '', 
+      formatCurrency(totalBalance).replace('Rp', '').trim()
+    ]);
 
-    doc.save(`Total_Tabungan_Anggota_${new Date().toISOString().split('T')[0]}.pdf`);
-    toast.success('Laporan tabungan PDF berhasil diunduh');
+    const toastId = toast.loading('Membuat dokumen PDF...');
+
+    try {
+      await exportModernPDF({
+        title: 'Laporan Total Tabungan Anggota',
+        filename: `Total_Tabungan_Anggota_${new Date().toISOString().split('T')[0]}`,
+        columns: ['No', 'Nama Anggota', 'Divisi', 'Total Saldo (Rp)'],
+        data: tableData,
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 20 },
+          2: { halign: 'center', cellWidth: 80 },
+          3: { halign: 'right', fontStyle: 'bold' }
+        }
+      });
+      toast.success('Laporan tabungan PDF berhasil diunduh', { id: toastId });
+    } catch (err) {
+      toast.error('Gagal membuat laporan PDF', { id: toastId });
+    }
   };
 
   const getMemberHistory = (memberId: string) => {
@@ -279,42 +268,17 @@ export const Tabungan: React.FC = () => {
   // const pendingPenarikan = transactions.filter(t => t.type === 'penarikan' && t.status === 'pending');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header Box */}
-      <div className="bg-white p-3 md:p-4 border-b border-gray-200 rounded-xl shadow-sm">
+      <div className="bg-white px-4 py-3 border-b border-gray-200 rounded-xl shadow-sm">
         <h2 className="text-base md:text-lg font-semibold text-gray-800 leading-tight">Manajemen Tabungan</h2>
         <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">Kelola saldo, setoran, dan penarikan anggota</p>
       </div>
 
-      <div className="flex justify-start gap-2">
-        <Button 
-          onClick={() => {
-            setEditingId(null);
-            setFormData(prev => ({ ...prev, type: 'setoran', memberId: '', nominal: '', note: '' }));
-            setIsInputModalOpen(true);
-          }}
-          variant="outline" 
-          size="sm" 
-          className="flex-1 md:flex-none gap-1.5 text-[11px] md:text-xs font-semibold px-4 py-2 border-gray-200 rounded-md text-blue-700 bg-white shadow-sm hover:bg-blue-50 transition-all active:scale-95 h-9 md:h-10"
-        >
-          <Plus size={14} /> <span className="hidden xs:inline">Tambah</span> Transaksi
-        </Button>
-        <Button 
-          onClick={() => {
-            setEditingId(null);
-            setFormData(prev => ({ ...prev, type: 'penarikan', memberId: '', nominal: '', note: '' }));
-            setIsInputModalOpen(true);
-          }}
-          variant="outline" 
-          size="sm" 
-          className="flex-1 md:flex-none gap-1.5 text-[11px] md:text-xs font-semibold px-4 py-2 border-gray-200 rounded-md text-red-700 bg-white shadow-sm hover:bg-red-50 transition-all active:scale-95 h-9 md:h-10"
-        >
-          <Minus size={14} /> <span className="hidden xs:inline">Penarikan</span> Dana
-        </Button>
-      </div>
+
 
       {/* Main Balance Card (Minimalist Highlight) */}
-      <div className="p-4 md:p-5 bg-gradient-to-r from-red-700 to-red-900 text-white shadow-sm rounded-xl overflow-hidden relative border border-red-700/10">
+      <div className="p-4 bg-gradient-to-r from-red-700 to-red-900 text-white shadow-sm rounded-xl overflow-hidden relative border border-red-700/10">
         <div className="relative z-10">
           <p className="text-white/80 text-[10px] md:text-xs font-bold uppercase tracking-[0.1em] mb-1">Total Saldo Tabungan</p>
           <h2 className="text-xl md:text-2xl font-bold leading-none">{formatCurrency(totalBalance)}</h2>
@@ -348,10 +312,35 @@ export const Tabungan: React.FC = () => {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Left Column: Actions and Transactions */}
+        <div className="space-y-4">
+          {/* Action Buttons */}
+          <div className="grid grid-cols-1 md:flex md:flex-wrap gap-3">
+            <Button 
+              className="w-full md:w-auto font-bold text-xs gap-2 px-6 py-2.5 shadow-md active:scale-95 transition-all"
+              onClick={() => {
+                setEditingId(null);
+                setFormData(prev => ({ ...prev, type: 'setoran', memberId: '', nominal: '', note: '' }));
+                setIsInputModalOpen(true);
+              }}
+            >
+              <PlusCircle size={16} /> Uang Masuk
+            </Button>
+            <Button 
+              className="w-full md:w-auto font-bold text-xs gap-2 px-6 py-2.5 shadow-md active:scale-95 transition-all"
+              onClick={() => {
+                setEditingId(null);
+                setFormData(prev => ({ ...prev, type: 'penarikan', memberId: '', nominal: '', note: '' }));
+                setIsInputModalOpen(true);
+              }}
+            >
+              <MinusCircle size={16} /> Uang Keluar
+            </Button>
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Transactions Table / Card List */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+          {/* Recent Transactions Table / Card List */}
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/30">
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Riwayat Transaksi</h3>
             <button 
@@ -367,16 +356,16 @@ export const Tabungan: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50/50 text-gray-400 text-xs border-b border-gray-100">
-                  <th className="px-6 py-3 font-bold">Nama</th>
-                  <th className="px-6 py-3 font-bold">Tanggal</th>
-                  <th className="px-6 py-3 font-bold text-right">Nominal</th>
-                  <th className="px-6 py-3 font-bold text-right">Aksi</th>
+                  <th className="px-4 py-2.5 font-bold">Nama</th>
+                  <th className="px-4 py-2.5 font-bold">Tanggal</th>
+                  <th className="px-4 py-2.5 font-bold text-right">Nominal</th>
+                  <th className="px-4 py-2.5 font-bold text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="text-sm divide-y divide-gray-50">
                 {transactions.length > 0 ? transactions.slice(0, 10).map((tx) => (
                   <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <button 
                         onClick={() => setSelectedMemberId(tx.member_id)}
                         className="font-bold text-gray-800 text-sm hover:text-red-700 hover:underline text-left"
@@ -387,16 +376,16 @@ export const Tabungan: React.FC = () => {
                         {tx.type}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="flex items-center gap-2 text-xs text-gray-700">
                         <Calendar size={12} className="text-red-700" />
                         <span>{new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
                       </div>
                     </td>
-                    <td className={clsx("px-6 py-4 font-bold text-right text-sm", tx.type === 'setoran' ? "text-gray-900" : "text-red-600")}>
+                    <td className={clsx("px-4 py-3 font-bold text-right text-sm", tx.type === 'setoran' ? "text-gray-900" : "text-red-600")}>
                       {tx.type === 'penarikan' ? '-' : ''}{formatCurrency(tx.amount).replace('Rp', '').trim()}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-1">
                         <button 
                           onClick={() => handleEdit(tx)}
@@ -461,6 +450,7 @@ export const Tabungan: React.FC = () => {
             )}
           </div>
         </div>
+      </div>
 
         {/* Member Balances Table / Card List */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">

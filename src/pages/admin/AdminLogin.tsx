@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { RefreshCw, Eye, EyeOff } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import { toast } from 'sonner';
+import { supabase } from '../../services/supabaseClient';
 
 export const AdminLogin: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -18,8 +19,8 @@ export const AdminLogin: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const savedRole = localStorage.getItem('role');
-    const token = localStorage.getItem('token');
+    const savedRole = sessionStorage.getItem('role');
+    const token = sessionStorage.getItem('token');
     if (token && savedRole === 'admin') {
       navigate('/admin/dashboard');}
     generateCaptcha();}, [navigate]);
@@ -31,7 +32,7 @@ export const AdminLogin: React.FC = () => {
       code += chars.charAt(Math.floor(Math.random() * chars.length));}
     setCaptchaCode(code);};
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (captchaAnswer.toUpperCase() !== captchaCode) {
@@ -45,18 +46,50 @@ export const AdminLogin: React.FC = () => {
       return;}
 
     setIsLoading(true);
-    // Simulate login success (In a real app, this would be an API call)
-    const savedUsername = localStorage.getItem('admin_username') || '111';
-    const savedPassword = localStorage.getItem('admin_password') || '111';
     
-    if (username === savedUsername && password === savedPassword) {
-      toast.success('Login berhasil! Selamat datang Admin.');
-      login(`admin-token-${Date.now()}`, 'admin');
-      navigate('/admin/dashboard');} else {
-      toast.error('Username atau Password salah.');
-      generateCaptcha();
-      setCaptchaAnswer('');}
-    setIsLoading(false);};
+    try {
+      console.log('Supabase URL check:', import.meta.env.VITE_SUPABASE_URL ? 'OK' : 'MISSING');
+      console.log('Attempting login for:', username);
+      
+      // Menggunakan RPC sesuai instruksi (login_admin)
+      const { data, error } = await supabase.rpc('login_admin', {
+        input_username: username,
+        input_password: password
+      });
+
+      // Debugging sesuai instruksi
+      console.log('RPC Response Data:', data);
+      console.log('RPC Response Error:', error);
+
+      if (error) {
+        console.error('Supabase RPC Error:', error);
+        toast.error(`Database Error: ${error.message || 'Gagal terhubung ke server'}`);
+        return;
+      }
+
+      // Validasi: jika ada data berarti login berhasil
+      if (data && data.length > 0) {
+        const admin = data[0];
+        toast.success(`Login berhasil! Selamat datang ${admin.username}.`);
+        
+        // Simpan session
+        sessionStorage.setItem('admin_username', admin.username);
+        login(`admin-token-${admin.id}`, 'admin');
+        
+        // Redirect
+        navigate('/admin/dashboard');
+      } else {
+        toast.error('Username atau Password salah.');
+        generateCaptcha();
+        setCaptchaAnswer('');
+      }
+    } catch (err) {
+      console.error('Frontend Login Error:', err);
+      toast.error('Terjadi kesalahan pada sistem login.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">

@@ -44,7 +44,7 @@ export const Tabungan: React.FC = () => {
     amount: 0
   });
   
-  const memberId = localStorage.getItem('member_id');
+  const memberId = sessionStorage.getItem('member_id');
 
   const fetchData = async () => {
     if (!memberId) return;
@@ -182,8 +182,8 @@ export const Tabungan: React.FC = () => {
 
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center bg-white px-4 py-3 rounded-xl border border-gray-100 shadow-sm">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Rekap Tabungan</h2>
           <p className="text-xs text-gray-500 mt-1">Pantau perkembangan saldo tabungan Anda</p>
@@ -236,7 +236,7 @@ export const Tabungan: React.FC = () => {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Deposit History Table */}
         <Card className="overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/30 flex justify-between items-center">
@@ -247,26 +247,26 @@ export const Tabungan: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-white border-b border-gray-100">
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tanggal</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Nominal</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Bukti</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Status</th>
+                  <th className="px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tanggal</th>
+                  <th className="px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Nominal</th>
+                  <th className="px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Bukti</th>
+                  <th className="px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {transactions.filter(t => t.type === 'setoran').length > 0 ? 
                   transactions.filter(t => t.type === 'setoran').map(tx => (
                   <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-3">
                       <p className="text-sm font-bold text-gray-800">{new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</p>
                       {tx.note && <p className="text-[9px] text-gray-400 italic mt-0.5">{tx.note}</p>}
                     </td>
-                    <td className="px-4 py-4 text-right">
+                    <td className="px-4 py-3 text-right">
                       <p className="text-sm font-black text-gray-900">
                         {formatCurrency(tx.amount).replace('Rp', '').trim()}
                       </p>
                     </td>
-                    <td className="px-4 py-4 text-center">
+                    <td className="px-4 py-3 text-center">
                       {tx.proof_url ? (
                         <button 
                           onClick={() => setSelectedProofUrl(tx.proof_url || null)}
@@ -280,7 +280,7 @@ export const Tabungan: React.FC = () => {
                         <span className="text-[10px] text-gray-300">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-4 text-right">
+                    <td className="px-4 py-3 text-right">
                       <span className={clsx(
                         "text-[9px] font-black uppercase px-2 py-1 rounded-sm",
                         tx.status === 'approved' ? "bg-green-100 text-green-700" : 
@@ -312,27 +312,27 @@ export const Tabungan: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-white border-b border-gray-100">
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tanggal</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Nominal</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Bukti</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Aksi</th>
-                  <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Status</th>
+                  <th className="px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tanggal</th>
+                  <th className="px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Nominal</th>
+                  <th className="px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Bukti</th>
+                  <th className="px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Aksi</th>
+                  <th className="px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {transactions.filter(t => t.type === 'penarikan').length > 0 ? 
                   transactions.filter(t => t.type === 'penarikan').map(tx => (
                   <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-3">
                       <p className="text-sm font-bold text-gray-800">{new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</p>
                       {tx.note && <p className="text-[9px] text-gray-400 italic mt-0.5">{tx.note}</p>}
                     </td>
-                    <td className="px-4 py-4 text-right">
+                    <td className="px-4 py-3 text-right">
                       <p className="text-sm font-black text-red-700">
                         -{formatCurrency(tx.amount).replace('Rp', '').trim()}
                       </p>
                     </td>
-                    <td className="px-4 py-4 text-center">
+                    <td className="px-4 py-3 text-center">
                       {tx.proof_url ? (
                         <button 
                           onClick={() => setSelectedProofUrl(tx.proof_url || null)}
@@ -346,7 +346,7 @@ export const Tabungan: React.FC = () => {
                         <span className="text-[10px] text-gray-300">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-4 text-center">
+                    <td className="px-4 py-3 text-center">
                       {tx.status === 'pending' ? (
                         <button 
                           onClick={() => handleCancelWithdrawal(tx.id)}
@@ -358,7 +358,7 @@ export const Tabungan: React.FC = () => {
                         <span className="text-[10px] text-gray-300">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-4 text-right">
+                    <td className="px-4 py-3 text-right">
                       <span className={clsx(
                         "text-[9px] font-black uppercase px-2 py-1 rounded-sm",
                         tx.status === 'approved' ? "bg-green-100 text-green-700" : 

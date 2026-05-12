@@ -12,13 +12,10 @@ export interface Schedule {
 }
 
 export const getSchedules = async (): Promise<Schedule[]> => {
-  const { data, error } = await supabase
-    .from('schedules')
-    .select('*')
-    .order('date', { ascending: true });
+  const { data, error } = await supabase.rpc('get_schedules');
 
   if (error) {
-    console.error('Error fetching schedules:', error);
+    console.error('Error fetching schedules via RPC:', error);
     return [];
   }
 
@@ -26,7 +23,7 @@ export const getSchedules = async (): Promise<Schedule[]> => {
   const now = new Date();
   const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   
-  return (data || []).filter(s => {
+  return (data || []).filter((s: any) => {
     const scheduleDate = new Date(s.date);
     return scheduleDate >= startOfCurrentMonth;
   });
@@ -34,11 +31,19 @@ export const getSchedules = async (): Promise<Schedule[]> => {
 
 export const addSchedule = async (schedule: Omit<Schedule, 'id'>): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from('schedules')
-      .insert([schedule]);
+    const { error } = await supabase.rpc('add_schedule', {
+      p_title: schedule.title,
+      p_date: schedule.date,
+      p_time: schedule.time,
+      p_location: schedule.location,
+      p_description: schedule.description,
+      p_type: schedule.type
+    });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase RPC Error (add_schedule):', error);
+      throw error;
+    }
     notifyDataChange();
     return true;
   } catch (error) {
@@ -49,12 +54,25 @@ export const addSchedule = async (schedule: Omit<Schedule, 'id'>): Promise<boole
 
 export const updateSchedule = async (id: string, updatedData: Partial<Schedule>): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from('schedules')
-      .update(updatedData)
-      .eq('id', id);
+    // Kita mengirim semua parameter, yang tidak diupdate bisa diset null oleh frontend jika tidak ada
+    // atau lebih baik kita membuat RPC update yang bisa menerima input partial.
+    // Tapi karena form selalu memberikan data lengkap, kita bisa fetch yang lama dulu jika perlu,
+    // atau buat RPC update_schedule_partial.
+    // Di sini kita asumsikan updatedData berisi semua kolom karena form di frontend memberikan semuanya.
+    const { error } = await supabase.rpc('update_schedule', {
+      p_id: id,
+      p_title: updatedData.title,
+      p_date: updatedData.date,
+      p_time: updatedData.time,
+      p_location: updatedData.location,
+      p_description: updatedData.description,
+      p_type: updatedData.type
+    });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase RPC Error (update_schedule):', error);
+      throw error;
+    }
     notifyDataChange();
     return true;
   } catch (error) {
@@ -65,12 +83,14 @@ export const updateSchedule = async (id: string, updatedData: Partial<Schedule>)
 
 export const deleteSchedule = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from('schedules')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.rpc('delete_schedule', {
+      p_id: id
+    });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase RPC Error (delete_schedule):', error);
+      throw error;
+    }
     notifyDataChange();
     return true;
   } catch (error) {

@@ -29,8 +29,8 @@ export const Dashboard: React.FC = () => {
 
   const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
 
-  const memberId = localStorage.getItem('member_id');
-  const storedName = localStorage.getItem('member_name') || 'Anggota';
+  const memberId = sessionStorage.getItem('member_id');
+  const storedName = sessionStorage.getItem('member_name') || 'Anggota';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -88,7 +88,7 @@ export const Dashboard: React.FC = () => {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Welcome Section (Matching Admin Style) */}
       <div className="p-4 bg-gradient-to-r from-red-700 to-red-900 text-white shadow-sm rounded-md overflow-hidden relative group">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -170,16 +170,16 @@ export const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Attendance List */}
         <Card className="overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+          <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Riwayat Kehadiran Terakhir</h3>
             <History size={14} className="text-gray-300" />
           </div>
           <div className="divide-y divide-gray-50 max-h-[300px] overflow-y-auto">
             {attendance.length > 0 ? [...attendance].reverse().map(att => (
-              <div key={att.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50/30 transition-colors">
+              <div key={att.id} className="px-4 py-2.5 flex items-center justify-between hover:bg-gray-50/30 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className={clsx(
                     "w-8 h-8 rounded-full flex items-center justify-center",
@@ -210,13 +210,13 @@ export const Dashboard: React.FC = () => {
 
         {/* Recent Transactions */}
         <Card className="overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+          <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Transaksi Terakhir</h3>
             <Wallet size={14} className="text-gray-300" />
           </div>
           <div className="divide-y divide-gray-50 max-h-[300px] overflow-y-auto">
             {transactions.length > 0 ? [...transactions].reverse().slice(0, 10).map(tx => (
-              <div key={tx.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50/30 transition-colors">
+              <div key={tx.id} className="px-4 py-2.5 flex items-center justify-between hover:bg-gray-50/30 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className={clsx(
                     "w-8 h-8 rounded-full flex items-center justify-center",

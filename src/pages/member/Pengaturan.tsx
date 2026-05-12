@@ -37,7 +37,7 @@ export const Pengaturan: React.FC = () => {
     bankAccountName: ''
   });
 
-  const memberId = localStorage.getItem('member_id');
+  const memberId = sessionStorage.getItem('member_id');
 
   const fetchData = async () => {
     if (!memberId) return;
@@ -124,8 +124,8 @@ export const Pengaturan: React.FC = () => {
 
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between bg-white p-3 md:p-4 border-b border-gray-200 rounded-md shadow-sm">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between bg-white px-4 py-3 border-b border-gray-200 rounded-md shadow-sm">
         <div>
           <h2 className="text-lg font-semibold text-gray-800 leading-tight">Pengaturan Profil</h2>
           <p className="text-xs text-gray-500 mt-0.5">Kelola informasi akun dan rekening Anda secara terpisah</p>
@@ -135,7 +135,7 @@ export const Pengaturan: React.FC = () => {
       <div className="grid grid-cols-1 gap-4">
         {/* Account Info Table Section - Flat Style */}
         <div className="bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden">
-          <div className="bg-gray-50/50 px-4 py-3 border-b flex justify-between items-center">
+          <div className="bg-gray-50/50 px-4 py-2.5 border-b flex justify-between items-center">
             <div className="flex items-center gap-2.5">
               <div className="p-1.5 bg-red-100 text-red-600 rounded-md">
                 <ShieldCheck size={16} />
@@ -174,7 +174,7 @@ export const Pengaturan: React.FC = () => {
 
         {/* Bank Info Table Section - Flat Style */}
         <div className="bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden">
-          <div className="bg-gray-50/50 px-4 py-3 border-b flex justify-between items-center">
+          <div className="bg-gray-50/50 px-4 py-2.5 border-b flex justify-between items-center">
             <div className="flex items-center gap-2.5">
               <div className="p-1.5 bg-blue-100 text-blue-600 rounded-md">
                 <CreditCard size={16} />

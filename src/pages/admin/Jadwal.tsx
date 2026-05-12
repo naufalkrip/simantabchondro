@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
@@ -8,7 +8,6 @@ import {
   updateSchedule, 
   deleteSchedule
 } from '../../services/scheduleService';
-import { subscribeToDataChange } from '../../services/refreshService';
 import type { Schedule } from '../../services/scheduleService';
 import { 
   PlusCircle, 
@@ -22,15 +21,27 @@ import {
 
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getSetting, updateSetting } from '../../services/settingsService';
 
 export const Jadwal: React.FC = () => {
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const queryClient = useQueryClient();
+  
+  // Queries
+  const { data: schedules = [], isLoading: isLoadingSchedules } = useQuery({
+    queryKey: ['schedules'],
+    queryFn: getSchedules
+  });
+
+  const { data: activityCategories = ['Latihan Rutin', 'Tampilan Parade', 'Rapat Pengurus'] } = useQuery({
+    queryKey: ['settings', 'activity_categories'],
+    queryFn: () => getSetting('activity_categories').then(res => res || ['Latihan Rutin', 'Tampilan Parade', 'Rapat Pengurus'])
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Category management
-  const [activityCategories, setActivityCategories] = useState<string[]>(['Latihan Rutin', 'Tampilan Parade', 'Rapat Pengurus']);
   const [isAddingActivity, setIsAddingActivity] = useState(false);
   const [newActivityName, setNewActivityName] = useState('');
   const [deleteScheduleConfirm, setDeleteScheduleConfirm] = useState<{ isOpen: boolean; id: string; title: string }>({
@@ -51,38 +62,17 @@ export const Jadwal: React.FC = () => {
     description: '',
     type: 'latihan' as Schedule['type']});
 
-  const fetchData = async () => {
-    const data = await getSchedules();
-    setSchedules(data);
-    
-    // Load categories from localStorage or extract from existing schedules
-    const savedCategories = localStorage.getItem('simantab_activity_categories');
-    if (savedCategories) {
-      setActivityCategories(JSON.parse(savedCategories));} else {
-      const existingTitles = Array.from(new Set(data.map(s => s.title)));
-      if (existingTitles.length > 0) {
-        const combined = Array.from(new Set([...activityCategories, ...existingTitles]));
-        setActivityCategories(combined);}}};
-
-  useEffect(() => {
-    fetchData();
-
-    // Subscribe to real-time changes
-    const unsubscribe = subscribeToDataChange(() => {
-      fetchData();
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const saveCategories = (cats: string[]) => {
-    setActivityCategories(cats);
-    localStorage.setItem('simantab_activity_categories', JSON.stringify(cats));};
+  const updateCategoryMutation = useMutation({
+    mutationFn: (newCategories: string[]) => updateSetting('activity_categories', newCategories),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings', 'activity_categories'] });
+    }
+  });
 
   const handleAddActivityCategory = () => {
     if (newActivityName.trim() && !activityCategories.includes(newActivityName.trim())) {
       const updated = [...activityCategories, newActivityName.trim()];
-      saveCategories(updated);
+      updateCategoryMutation.mutate(updated);
       setFormData({ ...formData, title: newActivityName.trim() });
       toast.success(`Kategori ${newActivityName.trim()} ditambahkan`);
     }
@@ -95,8 +85,8 @@ export const Jadwal: React.FC = () => {
 
   const confirmDeleteCategory = () => {
     const catToDelete = deleteCategoryConfirm.name;
-    const updated = activityCategories.filter(c => c !== catToDelete);
-    saveCategories(updated);
+    const updated = activityCategories.filter((c: string) => c !== catToDelete);
+    updateCategoryMutation.mutate(updated);
     if (formData.title === catToDelete) {
       setFormData({ ...formData, title: updated[0] || '' });
     }
@@ -118,7 +108,7 @@ export const Jadwal: React.FC = () => {
         if (res) {
           setIsModalOpen(false);
           resetForm();
-          fetchData();
+          queryClient.invalidateQueries({ queryKey: ['schedules'] });
           return editingId ? 'Jadwal diperbarui' : 'Jadwal ditambahkan';
         }
         throw new Error('Gagal menyimpan');
@@ -155,7 +145,7 @@ export const Jadwal: React.FC = () => {
     toast.promise(promise, {
       loading: `Menghapus jadwal ${title}...`,
       success: () => {
-        fetchData();
+        queryClient.invalidateQueries({ queryKey: ['schedules'] });
         return `Jadwal ${title} berhasil dihapus`;
       },
       error: 'Gagal menghapus jadwal'
@@ -164,7 +154,7 @@ export const Jadwal: React.FC = () => {
 
   const resetForm = () => {
     setFormData({
-      title: activityCategories[0] || '',
+      title: activityCategories?.[0] || 'Latihan Rutin',
       date: new Date().toISOString().split('T')[0],
       time: '19:00',
       location: '',
@@ -186,8 +176,8 @@ export const Jadwal: React.FC = () => {
 
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white p-3 md:p-4 border-b border-gray-200 rounded-md shadow-sm">
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white px-4 py-3 border-b border-gray-200 rounded-md shadow-sm">
         <div>
           <h2 className="text-lg font-semibold text-gray-800 leading-tight">Manajemen Jadwal</h2>
           <p className="text-xs text-gray-500 mt-0.5">Atur kegiatan latihan, tampilan, dan agenda lainnya</p>
@@ -197,12 +187,17 @@ export const Jadwal: React.FC = () => {
           variant="primary" 
           size="sm" 
           className="w-full md:w-auto gap-2"
+          disabled={isLoadingSchedules}
         >
           <PlusCircle size={16} /> Tambah Jadwal
         </Button>
       </div>
 
-      {Object.keys(groupedSchedules).length > 0 ? (
+      {isLoadingSchedules ? (
+        <Card className="p-12 text-center bg-white border-0 shadow-sm ring-1 ring-gray-100">
+          <p className="text-gray-500 font-medium">Memuat jadwal...</p>
+        </Card>
+      ) : Object.keys(groupedSchedules).length > 0 ? (
         Object.entries(groupedSchedules).map(([monthYear, monthSchedules]) => (
           <div key={monthYear} className="space-y-4">
             <div className="flex items-center gap-3 px-1">
@@ -216,22 +211,22 @@ export const Jadwal: React.FC = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100">
-                      <th className="px-6 py-3 text-xs font-bold text-gray-400  w-16 text-center">No</th>
-                      <th className="px-6 py-3 text-xs font-bold text-gray-400 ">Nama Kegiatan</th>
-                      <th className="px-6 py-3 text-xs font-bold text-gray-400 ">Waktu & Tanggal</th>
-                      <th className="px-6 py-3 text-xs font-bold text-gray-400 ">Lokasi</th>
-                      <th className="px-6 py-3 text-xs font-bold text-gray-400  text-right">Aksi</th>
+                      <th className="px-5 py-2.5 text-xs font-bold text-gray-400  w-16 text-center">No</th>
+                      <th className="px-5 py-2.5 text-xs font-bold text-gray-400 ">Nama Kegiatan</th>
+                      <th className="px-5 py-2.5 text-xs font-bold text-gray-400 ">Waktu & Tanggal</th>
+                      <th className="px-5 py-2.5 text-xs font-bold text-gray-400 " >Lokasi</th>
+                      <th className="px-5 py-2.5 text-xs font-bold text-gray-400  text-right">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {monthSchedules.map((item, index) => (
                       <tr key={item.id} className="hover:bg-red-50/30 transition-colors group">
-                        <td className="px-6 py-4 text-sm text-gray-400 text-center font-medium">{index + 1}</td>
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-3 text-sm text-gray-400 text-center font-medium">{index + 1}</td>
+                        <td className="px-5 py-3">
                           <div className="font-bold text-gray-800 text-sm">{item.title}</div>
                           {item.description && <div className="text-xs text-gray-400 mt-0.5 line-clamp-1">{item.description}</div>}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-3">
                           <div className="flex items-center gap-2 text-xs text-gray-700">
                             <CalendarIcon size={12} className="text-red-700" />
                             <span>{new Date(item.date).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
@@ -241,13 +236,13 @@ export const Jadwal: React.FC = () => {
                             <span>{item.time} WIB</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-3">
                           <div className="flex items-center gap-2 text-xs text-gray-600">
                             <MapPin size={12} className="text-red-700" />
                             <span className="line-clamp-1">{item.location}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-5 py-3 text-right">
                           <div className="flex justify-end gap-1">
                             <button 
                               onClick={() => handleEdit(item)}
@@ -333,7 +328,7 @@ export const Jadwal: React.FC = () => {
                     value={formData.title}
                     onChange={(e) => setFormData({...formData, title: e.target.value})}
                   >
-                    {activityCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    {['latihan', 'rapat', 'tampilan', 'lainnya'].map((cat: any) => (<option key={cat} value={cat}>{cat}</option>))}
                   </select>
                 </div>
                 <button 
@@ -357,7 +352,7 @@ export const Jadwal: React.FC = () => {
               </div>
             ) : (
               <div className="flex gap-2">
-                <input
+                  <input
                   type="text"
                   autoFocus
                   className="flex-1 px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 text-sm outline-none transition-all"
@@ -365,7 +360,7 @@ export const Jadwal: React.FC = () => {
                   value={newActivityName}
                   onChange={(e) => setNewActivityName(e.target.value)}
                 />
-                <button type="button" onClick={handleAddActivityCategory} className="px-4 py-2.5 bg-red-700 text-white rounded-xl text-sm font-medium hover:bg-red-800 transition-colors">Simpan</button>
+                <button type="button" onClick={handleAddActivityCategory} disabled={updateCategoryMutation.isPending} className="px-4 py-2.5 bg-red-700 text-white rounded-xl text-sm font-medium hover:bg-red-800 transition-colors disabled:opacity-50">Simpan</button>
                 <button type="button" onClick={() => setIsAddingActivity(false)} className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors">Batal</button>
               </div>
             )}

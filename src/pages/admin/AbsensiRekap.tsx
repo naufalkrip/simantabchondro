@@ -5,10 +5,10 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { getMembers } from '../../services/memberService';
 import { getAttendanceByDateRange } from '../../services/attendanceService';
+import { subscribeToDataChange } from '../../services/refreshService';
 import type { Member } from '../../types/member';
 import { Calendar as CalendarIcon, FileText, Download } from 'lucide-react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { exportModernPDF } from '../../utils/pdfExport';
 import { toast } from 'sonner';
 
 export const AbsensiRekap: React.FC = () => {
@@ -29,26 +29,35 @@ export const AbsensiRekap: React.FC = () => {
 
   useEffect(() => {
     loadInitialData();
-  }, []);
+    const unsubscribe = subscribeToDataChange(() => {
+      loadInitialData();
+      if (dateRange.start && dateRange.end) {
+        handleFetchSummary(true);
+      }
+    });
+    return () => unsubscribe();
+  }, [dateRange]);
 
-  const handleFetchSummary = async () => {
+  const handleFetchSummary = async (silent: boolean = false) => {
     if (!dateRange.start || !dateRange.end) {
-      toast.error('Pilih rentang tanggal terlebih dahulu.');
+      if (!silent) toast.error('Pilih rentang tanggal terlebih dahulu.');
       return;
     }
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
     try {
       const data = await getAttendanceByDateRange(dateRange.start, dateRange.end);
       setSummaryData(data);
-      if (data.length === 0) {
-        toast.info('Tidak ada data absensi pada rentang waktu tersebut.');
-      } else {
-        toast.success(`Ditemukan ${data.length} rekaman absensi.`);
+      if (!silent) {
+        if (data.length === 0) {
+          toast.info('Tidak ada data absensi pada rentang waktu tersebut.');
+        } else {
+          toast.success(`Ditemukan ${data.length} rekaman absensi.`);
+        }
       }
     } catch (err) {
-      toast.error('Gagal mengambil data.');
+      if (!silent) toast.error('Gagal mengambil data.');
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
@@ -67,19 +76,9 @@ export const AbsensiRekap: React.FC = () => {
         return;
       }
 
-      const doc = new jsPDF(type === 'daftar' ? 'l' : 'p');
       const title = type === 'daftar' ? 'Laporan Daftar Absensi' : 'Laporan Rekap Absensi';
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text('SIMANTAB', 14, 15);
-      doc.setFontSize(14);
-      doc.text(title, 14, 22);
-
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Periode: ${start} s/d ${end}`, 14, 30);
-      doc.text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, 14, 35);
+      const fullTitle = `${title} (Periode: ${start} s/d ${end})`;
+      const filename = `Laporan_Absensi_${type}_${start}_${end}`;
 
       // Process and sort members for report (by Division then by Attendance)
       const sortedMembersForReport = members
@@ -98,6 +97,10 @@ export const AbsensiRekap: React.FC = () => {
           return b.hadir - a.hadir;
         });
 
+      let columns: string[] = [];
+      let tableData: any[][] = [];
+      let columnStyles: any = {};
+
       if (type === 'daftar') {
         const uniqueDates = Array.from(new Set(data.map(d => d.date))).sort();
         
@@ -108,8 +111,8 @@ export const AbsensiRekap: React.FC = () => {
           dateToLocationMap[date] = record?.location || 'Tanpa Keterangan';
         });
 
-        const tableColumn = ["Nama", "Divisi", ...uniqueDates.map(d => dateToLocationMap[d])];
-        const tableRows = sortedMembersForReport.map(m => {
+        columns = ["Nama", "Divisi", ...uniqueDates.map(d => dateToLocationMap[d])];
+        tableData = sortedMembersForReport.map(m => {
           const row = [m.name, m.divisi];
           uniqueDates.forEach(date => {
             const record = data.find(r => r.member_id === m.id && r.date === date);
@@ -117,18 +120,14 @@ export const AbsensiRekap: React.FC = () => {
           });
           return row;
         });
-
-        autoTable(doc, {
-          head: [tableColumn],
-          body: tableRows,
-          startY: 45,
-          styles: { fontSize: 7, cellPadding: 2, halign: 'center' },
-          headStyles: { fillColor: [185, 28, 28], fontStyle: 'bold' },
-          columnStyles: { 0: { halign: 'left', cellWidth: 35 }, 1: { halign: 'left', cellWidth: 25 } }
-        });
+        
+        columnStyles = { 
+          0: { halign: 'left', cellWidth: 35 }, 
+          1: { halign: 'left', cellWidth: 25 } 
+        };
       } else {
-        const tableColumn = ["No", "Nama", "Divisi", "Hadir", "Izin", "Bolos"];
-        const tableRows = sortedMembersForReport.map((m, i) => [
+        columns = ["No", "Nama", "Divisi", "Hadir", "Izin", "Bolos"];
+        tableData = sortedMembersForReport.map((m, i) => [
           i + 1, 
           m.name, 
           m.divisi, 
@@ -137,17 +136,23 @@ export const AbsensiRekap: React.FC = () => {
           m.bolos
         ]);
 
-        autoTable(doc, {
-          head: [tableColumn],
-          body: tableRows,
-          startY: 45,
-          styles: { fontSize: 9, cellPadding: 3 },
-          headStyles: { fillColor: [185, 28, 28], halign: 'center' },
-          columnStyles: { 0: { halign: 'center' }, 3: { halign: 'center' }, 4: { halign: 'center' }, 5: { halign: 'center' } }
-        });
+        columnStyles = { 
+          0: { halign: 'center' }, 
+          3: { halign: 'center' }, 
+          4: { halign: 'center' }, 
+          5: { halign: 'center' } 
+        };
       }
 
-      doc.save(`Laporan_Absensi_${type}_${start}_${end}.pdf`);
+      await exportModernPDF({
+        title: fullTitle,
+        filename,
+        columns,
+        data: tableData,
+        columnStyles,
+        orientation: 'portrait' // explicitly use portrait
+      });
+
       toast.success('Laporan berhasil diunduh', { id: toastId });
     } catch (error) {
       console.error('PDF Error:', error);
@@ -159,8 +164,8 @@ export const AbsensiRekap: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-4 border-b border-gray-200 rounded-md shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-4">
+      <div className="bg-white px-4 py-3 border-b border-gray-200 rounded-md shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-800">Rekap Absensi</h2>
           <p className="text-xs text-gray-500 mt-0.5">Analisis persentase kehadiran anggota</p>
@@ -195,14 +200,14 @@ export const AbsensiRekap: React.FC = () => {
               onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
             />
           </div>
-          <Button onClick={handleFetchSummary} isLoading={isLoading} className="font-bold text-xs py-2.5">
+          <Button onClick={() => handleFetchSummary(false)} isLoading={isLoading} className="font-bold text-xs py-2.5">
             Tampilkan Data
           </Button>
         </div>
       </div>
 
       {summaryData.length > 0 ? (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
@@ -213,7 +218,7 @@ export const AbsensiRekap: React.FC = () => {
               const count = summaryData.filter(d => d.status === stat.status).length;
               const percent = Math.round((count / summaryData.length) * 100) || 0;
               return (
-                <div key={stat.label} className={clsx("p-5 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden", stat.bg)}>
+                <div key={stat.label} className={clsx("p-4 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden", stat.bg)}>
                   <div className="relative z-10">
                     <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">{stat.label}</p>
                     <p className={`text-3xl font-black ${stat.text}`}>{percent}%</p>
@@ -229,7 +234,7 @@ export const AbsensiRekap: React.FC = () => {
 
           {/* Member Table */}
           <Card className="overflow-hidden border-gray-200">
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+            <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
               <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Detail Kehadiran Per Anggota</h3>
               <div className="flex gap-4 text-[9px] font-black text-gray-400 uppercase">
                 <span className="w-10 text-center">Hadir</span>
@@ -252,7 +257,7 @@ export const AbsensiRekap: React.FC = () => {
                   return b.h - a.h;
                 }) // Sort by Division then by highest 'Hadir' count
                 .map((member, index) => (
-                  <div key={member.id} className="px-6 py-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                  <div key={member.id} className="px-5 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
                     <div className="flex items-center gap-4">
                       <span className="text-[10px] font-black text-gray-300 w-4">{index + 1}</span>
                       <div>

@@ -10,9 +10,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+  const [token, setToken] = useState<string | null>(() => sessionStorage.getItem('token'));
   const [role, setRole] = useState<'admin' | 'member' | null>(() => {
-    const savedRole = localStorage.getItem('role');
+    const savedRole = sessionStorage.getItem('role');
     if (savedRole === 'admin' || savedRole === 'member') {
       return savedRole;
     }
@@ -22,15 +22,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = (newToken: string, newRole: 'admin' | 'member') => {
     setToken(newToken);
     setRole(newRole);
-    localStorage.setItem('token', newToken);
-    localStorage.setItem('role', newRole);
+    sessionStorage.setItem('token', newToken);
+    sessionStorage.setItem('role', newRole);
   };
 
   const logout = () => {
     setToken(null);
     setRole(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('role');
   };
 
   return (

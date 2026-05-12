@@ -6,7 +6,7 @@ import { Modal } from '../../components/ui/Modal';
 import { getFinanceData, saveFinanceTransaction, deleteFinanceTransaction, updateFinanceTransaction } from '../../services/financeService';
 import { subscribeToDataChange } from '../../services/refreshService';
 import type { FinanceTransaction } from '../../services/financeService';
-import { PlusCircle, MinusCircle, Wallet, Trash2, Calendar, Pencil } from 'lucide-react';
+import { PlusCircle, MinusCircle, Wallet, Trash2, Pencil, Activity } from 'lucide-react';
 import clsx from 'clsx';
 
 import { toast } from 'sonner';
@@ -138,154 +138,81 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
   return (
     <div className="space-y-6 pb-20">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white p-3 md:p-4 border-b border-gray-200 rounded-md shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white px-4 py-3 border-b border-gray-200 rounded-xl shadow-sm">
         <div>
-          <h2 className="text-lg font-semibold text-gray-800 leading-tight">{title}</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Manajemen dana dan riwayat transaksi {category === 'pengurus' ? 'Chondro' : category}</p>
-        </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <Button 
-            onClick={() => openModal('masuk')} 
-            variant="outline" 
-            size="sm" 
-            className="flex-1 md:flex-none gap-2 border-emerald-100 text-emerald-600 hover:bg-emerald-50 active:scale-95 transition-all"
-          >
-            <PlusCircle size={16} /> Uang Masuk
-          </Button>
-          <Button 
-            onClick={() => openModal('keluar')} 
-            variant="outline" 
-            size="sm" 
-            className="flex-1 md:flex-none gap-2 border-red-100 text-red-600 hover:bg-red-50 active:scale-95 transition-all"
-          >
-            <MinusCircle size={16} /> Uang Keluar
-          </Button>
+          <h2 className="text-base md:text-lg font-semibold text-gray-800 leading-tight">{title}</h2>
+          <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">Manajemen dana dan riwayat transaksi {category === 'pengurus' ? 'Chondro' : category}</p>
         </div>
       </div>
 
       {/* Summary Card */}
-      <div className="p-4 bg-gradient-to-r from-red-700 to-red-900 text-white shadow-sm rounded-md overflow-hidden relative border border-red-700/10">
+      <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden group">
         <div className="relative z-10">
-          <p className="text-white/80 text-xs font-bold uppercase tracking-[0.1em] mb-1">Total Dana Tersedia</p>
-          <h2 className="text-2xl font-bold leading-none">{formatCurrency(totalBalance)}</h2>
+          <div className="flex items-center gap-2 mb-3 text-gray-500">
+            <Wallet size={16} />
+            <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Total Dana Tersedia</p>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-black text-gray-900 leading-none">{formatCurrency(totalBalance)}</h2>
         </div>
-        <div className="absolute top-0 right-0 p-5 opacity-10">
-          <Wallet size={60} />
+        <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:scale-110 transition-transform duration-500 text-gray-900">
+          <Wallet size={100} />
         </div>
       </div>
 
+      {/* Action Buttons */}
+      <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 md:gap-3 mb-2 mt-2">
+        <Button 
+          className="w-full md:w-auto font-bold text-xs gap-1 md:gap-2 px-2 md:px-6 py-2.5 shadow-md active:scale-95 transition-all"
+          onClick={() => openModal('masuk')}
+        >
+          <PlusCircle size={16} /> Uang Masuk
+        </Button>
+        <Button 
+          className="w-full md:w-auto font-bold text-xs gap-1 md:gap-2 px-2 md:px-6 py-2.5 shadow-md active:scale-95 transition-all"
+          onClick={() => openModal('keluar')}
+        >
+          <MinusCircle size={16} /> Uang Keluar
+        </Button>
+      </div>
+
       {/* Transaction History */}
-      <Card className="overflow-hidden p-0 border-0 shadow-sm ring-1 ring-gray-100">
-        <div className="px-4 py-3 border-b border-gray-100 bg-white flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-6 bg-red-700 rounded-full" />
-            <h3 className="text-base font-bold text-gray-800">Riwayat Transaksi</h3>
+      <Card className="border-0 shadow-sm ring-1 ring-gray-100 p-0 overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 bg-white flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Activity size={18} className="text-gray-400" />
+            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-widest">Riwayat Transaksi</h3>
           </div>
-          <span className="text-sm font-bold  bg-gray-50 text-gray-500 px-3 py-1 rounded-full border border-gray-100">
+          <span className="text-xs font-bold bg-gray-50 text-gray-500 px-3 py-1 rounded-full border border-gray-100 hidden sm:block">
             {transactions.length} Transaksi
           </span>
         </div>
-        
-        {/* Desktop View Table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/50 text-gray-400 text-xs border-b border-gray-100">
-                <th className="px-6 py-3 font-bold">Keterangan</th>
-                <th className="px-6 py-3 font-bold">Tanggal</th>
-                <th className="px-6 py-3 font-bold text-right">Jumlah</th>
-                <th className="px-6 py-3 font-bold text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-gray-50">
-              {transactions.length > 0 ? (
-                transactions.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-gray-800 text-sm">{t.description}</div>
-                      <div className={clsx("text-[10px] font-bold uppercase mt-0.5",
-                        t.type === 'masuk' ? "text-green-600" : "text-red-600"
-                      )}>
-                        {t.type === 'masuk' ? 'Pemasukan' : 'Pengeluaran'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-xs text-gray-700">
-                        <Calendar size={12} className="text-red-700" />
-                        <span>{new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                      </div>
-                    </td>
-                    <td className={clsx("px-6 py-4 text-right font-bold text-sm",
-                      t.type === 'masuk' ? "text-green-600" : "text-red-600"
-                    )}>
-                      {t.type === 'masuk' ? '+' : '-'} {formatCurrency(t.amount).replace('Rp', '').trim()}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1">
-                        <button 
-                          onClick={() => handleEdit(t)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Edit Transaksi"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(t.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Hapus Transaksi"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-gray-400 italic">
-                    Belum ada riwayat transaksi untuk kategori ini.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
 
-        {/* Mobile View Card List */}
-        <div className="md:hidden divide-y divide-gray-100">
+        <div className="divide-y divide-gray-50 max-h-[400px] overflow-y-auto">
           {transactions.length > 0 ? (
             transactions.map((t) => (
-              <div key={t.id} className="p-4 space-y-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <p className="text-[13px] font-bold text-gray-900 leading-tight">{t.description}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className={clsx("text-[9px] font-black uppercase px-1.5 py-0.5 rounded border",
-                        t.type === 'masuk' ? "bg-green-50 text-green-600 border-green-100" : "bg-red-50 text-red-600 border-red-100"
-                      )}>
-                        {t.type === 'masuk' ? 'Pemasukan' : 'Pengeluaran'}
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-medium">{new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
-                    </div>
+              <div key={t.id} className="px-5 py-3 flex flex-col md:flex-row md:items-center justify-between hover:bg-gray-50 transition-colors gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-900 truncate">{t.description}</p>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className={clsx("text-[10px] font-black uppercase tracking-wider", t.type === 'masuk' ? "text-green-600" : "text-red-600")}>
+                      {t.type === 'masuk' ? 'Pemasukan' : 'Pengeluaran'}
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-medium">{new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                   </div>
-                  <div className="text-right">
-                    <p className={clsx("text-sm font-black",
-                      t.type === 'masuk' ? "text-green-600" : "text-red-600"
-                    )}>
-                      {t.type === 'masuk' ? '+' : '-'} {formatCurrency(t.amount).replace('Rp', '').trim()}
-                    </p>
-                    <div className="flex justify-end gap-2 mt-2">
-                      <button onClick={() => handleEdit(t)} className="p-1.5 text-blue-600 bg-blue-50 rounded-md"><Pencil size={12} /></button>
-                      <button onClick={() => handleDelete(t.id)} className="p-1.5 text-red-600 bg-red-50 rounded-md"><Trash2 size={12} /></button>
-                    </div>
+                </div>
+                <div className="flex items-center justify-between md:justify-end gap-6">
+                  <span className={clsx("text-base font-black", t.type === 'masuk' ? "text-green-600" : "text-red-600")}>
+                    {t.type === 'masuk' ? '+' : '-'}{formatCurrency(t.amount).replace('Rp', '').trim()}
+                  </span>
+                  <div className="flex gap-1">
+                    <button onClick={() => handleEdit(t)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Pencil size={14} /></button>
+                    <button onClick={() => handleDelete(t.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14} /></button>
                   </div>
                 </div>
               </div>
             ))
           ) : (
-            <div className="px-6 py-12 text-center text-gray-400 italic text-xs">
-              Belum ada riwayat transaksi.
-            </div>
+            <div className="p-10 text-center text-gray-400 text-sm">Belum ada transaksi.</div>
           )}
         </div>
       </Card>

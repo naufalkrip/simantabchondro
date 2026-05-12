@@ -3,24 +3,58 @@ import type { Member } from '../types/member';
 import { notifyDataChange } from './refreshService';
 
 export const getMembers = async (): Promise<Member[]> => {
-  const { data, error } = await supabase
+  const { data: members, error } = await supabase
     .from('members')
     .select('*')
     .order('name', { ascending: true });
 
-  console.log('getMembers data:', data);
+  const { data: transactions, error: txError } = await supabase.rpc('get_transactions');
+
+  console.log('getMembers DEBUG:', { members, error, transactions, txError });
+
   if (error) {
     console.error('Error fetching members:', error);
     return [];
   }
 
-  return (data || []).map(m => ({
+  return (members || []).map(m => {
+    const memberTx = (transactions || []).filter((t: any) => t.member_id === m.id && t.status === 'approved');
+    const computedBalance = memberTx.reduce((acc: number, t: any) => t.type === 'setoran' ? acc + t.amount : acc - t.amount, 0);
+
+    return {
+      id: m.id,
+      name: m.name,
+      phone: m.phone,
+      joinedDate: m.joined_date || m.created_at || new Date().toISOString(),
+      divisi: m.divisi,
+      totalBalance: computedBalance,
+    bankOwnerName: m.bank_owner_name,
+    bankAccountNumber: m.bank_account_number,
+    bankName: m.bank_name,
+    username: m.username,
+    password: m.password
+    };
+  });
+};
+
+export const getMembersList = async (): Promise<Member[]> => {
+  const { data: members, error } = await supabase
+    .from('members')
+    .select('*')
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching members:', error);
+    return [];
+  }
+
+  return (members || []).map(m => ({
     id: m.id,
     name: m.name,
     phone: m.phone,
     joinedDate: m.joined_date || m.created_at || new Date().toISOString(),
     divisi: m.divisi,
-    totalBalance: m.total_balance || 0,
+    totalBalance: 0,
     bankOwnerName: m.bank_owner_name,
     bankAccountNumber: m.bank_account_number,
     bankName: m.bank_name,
@@ -31,7 +65,6 @@ export const getMembers = async (): Promise<Member[]> => {
 
 export const addMember = async (member: Omit<Member, 'id' | 'totalBalance'>): Promise<boolean> => {
   try {
-    console.log('Adding member to Supabase:', member);
     const { error } = await supabase
       .from('members')
       .insert([{
@@ -43,20 +76,15 @@ export const addMember = async (member: Omit<Member, 'id' | 'totalBalance'>): Pr
         bank_account_number: member.bankAccountNumber,
         bank_name: member.bankName,
         username: member.username,
-        password: member.password,
-        total_balance: 0
+        password: member.password || '123'
       }]);
 
-    if (error) {
-      console.error('Supabase error adding member:', error);
-      throw error;
-    }
-    console.log('Member added successfully');
+    if (error) throw error;
     notifyDataChange();
     return true;
   } catch (error) {
     console.error('Error adding member:', error);
-    return false;
+    throw error;
   }
 };
 
@@ -84,7 +112,7 @@ export const updateMember = async (id: string, updates: Partial<Member>): Promis
     return true;
   } catch (error) {
     console.error('Error updating member:', error);
-    return false;
+    throw error;
   }
 };
 
@@ -100,6 +128,6 @@ export const deleteMember = async (id: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error('Error deleting member:', error);
-    return false;
+    throw error;
   }
 };

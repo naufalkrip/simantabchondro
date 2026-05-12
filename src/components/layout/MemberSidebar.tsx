@@ -27,11 +27,11 @@ interface MemberSidebarProps {
 
 export const MemberSidebar: React.FC<MemberSidebarProps> = ({ isOpen, setIsOpen }) => {
   const { logout } = useAuth();
-  const [memberName, setMemberName] = React.useState(localStorage.getItem('member_name') || 'Anggota');
+  const [memberName, setMemberName] = React.useState(sessionStorage.getItem('member_name') || 'Anggota');
 
   React.useEffect(() => {
     const handleStorageChange = () => {
-      setMemberName(localStorage.getItem('member_name') || 'Anggota');
+      setMemberName(sessionStorage.getItem('member_name') || 'Anggota');
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
@@ -39,10 +39,10 @@ export const MemberSidebar: React.FC<MemberSidebarProps> = ({ isOpen, setIsOpen 
 
   return (
     <aside className={clsx(
-      "fixed top-0 left-0 h-full z-50 w-64 bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-in-out md:sticky md:top-0 md:h-screen md:translate-x-0 md:shadow-none border-r border-gray-100",
+      "fixed top-0 left-0 h-full z-50 w-60 bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-in-out md:sticky md:top-0 md:h-screen md:translate-x-0 md:shadow-none border-r border-gray-100",
       isOpen ? "translate-x-0" : "-translate-x-full"
     )}>
-      <div className="px-4 py-3 border-b flex items-center gap-3">
+      <div className="px-3 py-3 border-b flex items-center gap-3">
         <img src={logo} alt="SIMANTAB Logo" className="w-8 h-8 object-contain" />
         <div className="block">
           <h1 className="text-xl font-bold text-red-700 leading-tight">SIMANTAB</h1>
@@ -61,14 +61,14 @@ export const MemberSidebar: React.FC<MemberSidebarProps> = ({ isOpen, setIsOpen 
                   onClick={() => setIsOpen(false)}
                   className={({ isActive }) =>
                     clsx(
-                      'flex items-center justify-start gap-3 px-3 py-2.5 rounded-md transition-all duration-150 text-sm active:scale-[0.98]',
+                      'group flex items-center justify-start gap-3 px-3 py-2 rounded-md transition-all duration-150 text-sm active:scale-[0.98]',
                       isActive 
-                        ? 'bg-red-600 text-white font-medium shadow-sm' 
+                        ? 'bg-gradient-to-r from-red-700 to-red-900 text-white font-medium shadow-sm border border-red-700/50' 
                         : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
                     )
                   }
                 >
-                  <Icon className="w-5 h-5 shrink-0" />
+                  <Icon className="w-5 h-5 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" />
                   <span className="inline leading-none text-sm font-medium">{item.label}</span>
                 </NavLink>
               </li>
@@ -78,7 +78,7 @@ export const MemberSidebar: React.FC<MemberSidebarProps> = ({ isOpen, setIsOpen 
       </nav>
       
       <div className="p-3 border-t border-gray-100 mt-auto">
-        <div className="flex items-center justify-start gap-3 px-3 py-2.5 rounded-md hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 group">
+        <div className="flex items-center justify-start gap-3 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 group">
           <div className="w-8 h-8 shrink-0 rounded-md bg-red-50 flex items-center justify-center text-red-600 font-bold text-xs">
             {memberName.charAt(0).toUpperCase()}
           </div>

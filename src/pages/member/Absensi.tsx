@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { getAttendanceByDateRange } from '../../services/attendanceService';
+import { subscribeToDataChange } from '../../services/refreshService';
 import type { Attendance } from '../../types/attendance';
 import { 
   CheckCircle2, 
@@ -14,7 +15,7 @@ export const Absensi: React.FC = () => {
   const [attendance, setAttendance] = useState<Attendance[]>([]);
 
   
-  const memberId = localStorage.getItem('member_id');
+  const memberId = sessionStorage.getItem('member_id');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,10 +32,16 @@ export const Absensi: React.FC = () => {
       const myData = data.filter(a => a.member_id === memberId);
       
       setAttendance(myData);
-
     };
 
     fetchData();
+
+    // Subscribe to real-time changes
+    const unsubscribe = subscribeToDataChange(() => {
+      fetchData();
+    });
+
+    return () => unsubscribe();
   }, [memberId]);
 
   const stats = {
@@ -50,8 +57,8 @@ export const Absensi: React.FC = () => {
 
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center bg-white px-4 py-3 rounded-xl border border-gray-100 shadow-sm">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Detail Absensi</h2>
           <p className="text-xs text-gray-500 mt-1">Bulan {new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</p>
@@ -93,28 +100,28 @@ export const Absensi: React.FC = () => {
       </div>
 
       <Card className="overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/30">
+        <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50/30">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Daftar Kehadiran Lengkap</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white border-b border-gray-100">
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tanggal</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Lokasi/Keterangan</th>
-                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Status</th>
+                <th className="px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tanggal</th>
+                <th className="px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Lokasi/Keterangan</th>
+                <th className="px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {attendance.length > 0 ? [...attendance].reverse().map(att => (
                 <tr key={att.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-3">
                     <p className="text-sm font-bold text-gray-800">{new Date(att.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-3">
                     <p className="text-xs text-gray-500 font-medium">{att.location || 'Latihan Rutin'}</p>
                   </td>
-                  <td className="px-4 py-4 text-right">
+                  <td className="px-4 py-3 text-right">
                     <span className={clsx(
                       "text-[10px] font-black uppercase px-2 py-1 rounded-sm",
                       att.status === 'hadir' ? "bg-green-100 text-green-700" :

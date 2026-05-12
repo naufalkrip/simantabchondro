@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { RefreshCw, Eye, EyeOff } from 'lucide-react';
 import logo from '../../assets/logo.png';
 import { toast } from 'sonner';
+import { supabase } from '../../services/supabaseClient';
 
 export const MemberLogin: React.FC = () => {
   const [phone, setPhone] = useState('');
@@ -18,8 +19,8 @@ export const MemberLogin: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const savedRole = localStorage.getItem('role');
-    const token = localStorage.getItem('token');
+    const savedRole = sessionStorage.getItem('role');
+    const token = sessionStorage.getItem('token');
     if (token && savedRole === 'member') {
       navigate('/member/dashboard');
     }
@@ -52,32 +53,40 @@ export const MemberLogin: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // New Login Logic
-      const { getMembers } = await import('../../services/memberService');
-      const members = await getMembers();
-      
-      // Find member by phone number
-      const member = members.find(m => m.phone === phone);
+      console.log('Attempting member login for:', phone);
 
-      if (!member) {
-        toast.error('Nomor telepon tidak terdaftar.');
+      // Menggunakan RPC login_member untuk verifikasi password terenkripsi
+      const { data, error } = await supabase.rpc('login_member', {
+        input_phone: phone,
+        input_password: password
+      });
+
+      // Debugging respons login
+      console.log('Login RPC response data:', data);
+      console.log('Login RPC error:', error);
+
+      if (error) {
+        console.error('Supabase RPC Error:', error);
+        toast.error(`Database Error: ${error.message || 'Gagal terhubung ke server'}`);
         return;
       }
 
-      // Check password (default 111 as requested)
-      if (password !== '111' && password !== member.password) {
-        toast.error('Password salah.');
-        return;
+      if (data && data.length > 0) {
+        const member = data[0];
+        // Store member info for the portal
+        sessionStorage.setItem('member_id', member.id);
+        sessionStorage.setItem('member_name', member.name);
+        
+        toast.success(`Selamat datang kembali, ${member.name}!`);
+        login(`member-token-${member.id}`, 'member');
+        navigate('/member/dashboard');
+      } else {
+        toast.error('Nomor telepon atau Password salah.');
+        generateCaptcha();
+        setCaptchaAnswer('');
       }
-
-      // Store member info for the portal
-      localStorage.setItem('member_id', member.id);
-      localStorage.setItem('member_name', member.name);
-      
-      toast.success(`Selamat datang kembali, ${member.name}!`);
-      login(`member-token-${member.id}`, 'member');
-      navigate('/member/dashboard');
     } catch (err) {
+      console.error('Frontend Member Login Error:', err);
       toast.error('Gagal melakukan login. Periksa koneksi internet Anda.');
     } finally {
       setIsLoading(false);

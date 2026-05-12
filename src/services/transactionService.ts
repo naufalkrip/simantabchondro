@@ -4,16 +4,10 @@ import { updateMember } from './memberService';
 import { notifyDataChange } from './refreshService';
 
 export const getTransactions = async (): Promise<Transaction[]> => {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select(`
-      *,
-      member:members(name)
-    `)
-    .order('created_at', { ascending: false });
+  const { data, error } = await supabase.rpc('get_transactions');
 
   if (error) {
-    console.error('Error fetching transactions:', error);
+    console.error('Error fetching transactions via RPC:', error);
     return [];
   }
 
@@ -22,27 +16,25 @@ export const getTransactions = async (): Promise<Transaction[]> => {
 
 export const addTransaction = async (transaction: Omit<Transaction, 'id' | 'created_at' | 'member'>): Promise<boolean> => {
   try {
-    const { data, error } = await supabase
-      .from('transactions')
-      .insert([{
-        member_id: transaction.member_id,
-        amount: transaction.amount,
-        type: transaction.type,
-        status: transaction.status,
-        date: transaction.date,
-        proof_url: transaction.proof_url,
-        note: transaction.note
-      }])
-      .select()
-      .single();
+    console.log('Adding transaction via RPC:', transaction);
+    
+    // Menggunakan RPC untuk menghindari masalah RLS (Permission Denied)
+    const { data, error } = await supabase.rpc('add_transaction', {
+      p_member_id: transaction.member_id,
+      p_amount: transaction.amount,
+      p_type: transaction.type,
+      p_status: transaction.status,
+      p_date: transaction.date,
+      p_proof_url: transaction.proof_url,
+      p_note: transaction.note || ''
+    });
 
-    if (error) throw error;
-
-    // If transaction is approved, update member balance
-    if (transaction.status === 'approved' && data) {
-      await updateMemberBalance(transaction.member_id, transaction.type, transaction.amount);
+    if (error) {
+      console.error('Supabase RPC Error (add_transaction):', error);
+      throw error;
     }
 
+    console.log('Transaction added successfully:', data);
     notifyDataChange();
     return true;
   } catch (error) {
@@ -53,24 +45,14 @@ export const addTransaction = async (transaction: Omit<Transaction, 'id' | 'crea
 
 export const updateTransactionStatus = async (id: string, status: 'approved' | 'rejected', proof_url?: string): Promise<boolean> => {
   try {
-    const { data: transaction, error: fetchError } = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('id', id)
-      .single();
+    console.log('Updating transaction status via RPC:', id, status);
+    const { error } = await supabase.rpc('update_transaction_status', {
+      p_id: id,
+      p_status: status,
+      p_proof_url: proof_url
+    });
 
-    if (fetchError || !transaction) throw fetchError || new Error('Transaction not found');
-
-    const { error: updateError } = await supabase
-      .from('transactions')
-      .update({ status, proof_url: proof_url || transaction.proof_url })
-      .eq('id', id);
-
-    if (updateError) throw updateError;
-
-    if (status === 'approved' && transaction.status !== 'approved') {
-      await updateMemberBalance(transaction.member_id, transaction.type, transaction.amount);
-    }
+    if (error) throw error;
 
     notifyDataChange();
     return true;
@@ -120,25 +102,12 @@ export const updateTransaction = async (id: string, updates: Partial<Transaction
 
 export const deleteTransaction = async (id: string): Promise<boolean> => {
   try {
-    const { data: tx, error: fetchError } = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (fetchError || !tx) throw fetchError || new Error('Transaction not found');
-
-    const { error } = await supabase
-      .from('transactions')
-      .delete()
-      .eq('id', id);
+    console.log('Deleting transaction via RPC:', id);
+    const { error } = await supabase.rpc('delete_transaction', {
+      p_id: id
+    });
 
     if (error) throw error;
-
-    // Adjust balance if approved
-    if (tx.status === 'approved') {
-      await updateMemberBalance(tx.member_id, tx.type === 'setoran' ? 'penarikan' : 'setoran', tx.amount);
-    }
 
     notifyDataChange();
     return true;

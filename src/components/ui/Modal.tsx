@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
-import { Card } from './Card';
+import { motion, AnimatePresence } from 'framer-motion';
+import { modalBackdrop, modalContent } from '../../lib/animations';
 
 interface ModalProps {
   isOpen: boolean;
@@ -37,31 +38,46 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      
-      {/* Modal Content */}
-      <Card className={`relative w-full ${maxWidthClass} shadow-xl animate-in fade-in zoom-in duration-200 overflow-hidden p-0 rounded-md`}>
-        <div className="flex justify-between items-center px-4 py-3 border-b bg-gray-50/50">
-          <h3 className="font-bold text-gray-800 text-sm">{title}</h3>
-          <button 
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div 
+          key="modal-wrapper"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        >
+          {/* Backdrop */}
+          <motion.div 
+            variants={modalBackdrop}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={onClose}
-            className="p-1 rounded-md hover:bg-gray-200 text-gray-500 transition-colors"
+          />
+      
+          {/* Modal Content */}
+          <motion.div
+            variants={modalContent}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className={`relative w-full ${maxWidthClass} shadow-2xl overflow-hidden p-0 rounded-xl bg-white border border-gray-100`}
           >
-            <X size={18} />
-          </button>
-        </div>
-        <div className="p-4 max-h-[85vh] overflow-y-auto">
-          {children}
-        </div>
-      </Card>
-    </div>
+            <div className="flex justify-between items-center px-4 py-3 border-b bg-gray-50/50">
+              <h3 className="font-bold text-gray-800 text-sm">{title}</h3>
+              <button 
+                onClick={onClose}
+                className="p-1 rounded-md hover:bg-gray-200 text-gray-500 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-4 max-h-[85vh] overflow-y-auto">
+              {children}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

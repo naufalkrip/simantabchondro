@@ -1,31 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Card } from '../../components/ui/Card';
 import { getSchedules } from '../../services/scheduleService';
 import type { Schedule } from '../../services/scheduleService';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Calendar as CalendarIcon, 
   Clock, 
   MapPin,
   Info
 } from 'lucide-react';
+import { Card } from '../../components/ui/Card';
 
 export const Jadwal: React.FC = () => {
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
-
-
-  const fetchData = async () => {
-    const data = await getSchedules();
-    // Sort schedules by date (newest first for history, but maybe oldest first for upcoming?)
-    // Usually upcoming schedules should be shown.
-    // For now, let's just show all sorted by date.
-    const sorted = [...data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    setSchedules(sorted);
-
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { data: schedules = [], isLoading } = useQuery({
+    queryKey: ['schedules'],
+    queryFn: async () => {
+      const data = await getSchedules();
+      return [...data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }
+  });
 
   const formatMonthYear = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -42,8 +33,8 @@ export const Jadwal: React.FC = () => {
 
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-4 md:p-5 border-b border-gray-100 rounded-xl shadow-sm">
+    <div className="space-y-4">
+      <div className="bg-white px-4 py-3 border-b border-gray-100 rounded-xl shadow-sm">
         <h2 className="text-xl font-bold text-gray-900">Jadwal Kegiatan</h2>
         <p className="text-xs text-gray-500 mt-1">Informasi latihan, tampilan, dan agenda MB Chondro</p>
       </div>
@@ -59,7 +50,7 @@ export const Jadwal: React.FC = () => {
             <Card className="p-0 overflow-hidden border-0 shadow-sm ring-1 ring-gray-100">
               <div className="divide-y divide-gray-50">
                 {monthSchedules.map((item) => (
-                  <div key={item.id} className="flex items-center gap-3 p-3 md:p-4 hover:bg-gray-50 transition-colors group">
+                  <div key={item.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors group">
                     {/* Date Badge */}
                     <div className="w-12 md:w-16 flex flex-col items-center justify-center border-r border-gray-100 shrink-0 pr-3">
                       <span className="text-[10px] font-bold text-red-600 uppercase leading-none mb-1">
@@ -102,6 +93,10 @@ export const Jadwal: React.FC = () => {
             </Card>
           </div>
         ))
+      ) : isLoading ? (
+        <Card className="p-16 text-center bg-white border-0 shadow-sm ring-1 ring-gray-100">
+          <p className="text-gray-500 font-medium">Memuat jadwal...</p>
+        </Card>
       ) : (
         <Card className="p-16 text-center bg-white border-0 shadow-sm ring-1 ring-gray-100">
           <div className="flex flex-col items-center gap-4">

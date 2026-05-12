@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { getMembers } from '../../services/memberService';
 import { getAttendanceByDate, saveAttendance, getAttendanceHistory } from '../../services/attendanceService';
+import { subscribeToDataChange } from '../../services/refreshService';
 import type { Member } from '../../types/member';
 import { ChevronDown, History, Info } from 'lucide-react';
 import { toast } from 'sonner';
@@ -48,6 +49,10 @@ export const AbsensiRiwayat: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    const unsubscribe = subscribeToDataChange(() => {
+      loadData();
+    });
+    return () => unsubscribe();
   }, []);
 
   const filteredHistory = history.filter(item => {
@@ -113,8 +118,8 @@ export const AbsensiRiwayat: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-4 border-b border-gray-200 rounded-md shadow-sm">
+    <div className="space-y-4">
+      <div className="bg-white px-4 py-3 border-b border-gray-200 rounded-md shadow-sm">
         <h2 className="text-lg font-semibold text-gray-800">Riwayat Absensi</h2>
         <p className="text-xs text-gray-500 mt-0.5">Lihat dan edit data absensi kegiatan sebelumnya</p>
       </div>
@@ -154,7 +159,7 @@ export const AbsensiRiwayat: React.FC = () => {
               <button
                 key={item.date}
                 onClick={() => handleEditHistory(item.date, item.location)}
-                className="group relative bg-white p-5 rounded-xl border border-gray-100 hover:border-blue-300 hover:shadow-md transition-all text-left overflow-hidden"
+                className="group relative bg-white p-4 rounded-xl border border-gray-100 hover:border-blue-300 hover:shadow-md transition-all text-left overflow-hidden"
               >
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="space-y-2">
@@ -205,21 +210,21 @@ export const AbsensiRiwayat: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-50 text-gray-400 text-[10px] font-black uppercase tracking-widest border-b border-gray-100">
-                    <th className="px-6 py-3">Anggota</th>
-                    <th className="px-6 py-3">Divisi</th>
-                    <th className="px-6 py-3 text-right">Status</th>
+                    <th className="px-5 py-2.5">Anggota</th>
+                    <th className="px-5 py-2.5">Divisi</th>
+                    <th className="px-5 py-2.5 text-right">Status</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm divide-y divide-gray-50">
                   {members.map((member) => (
                     <tr key={member.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-3 font-bold text-gray-800">{member.name}</td>
-                      <td className="px-6 py-3">
+                      <td className="px-5 py-2.5 font-bold text-gray-800">{member.name}</td>
+                      <td className="px-5 py-2.5">
                         <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px] font-black border border-gray-200 uppercase">
                           {member.divisi}
                         </span>
                       </td>
-                      <td className="px-6 py-3 text-right">
+                      <td className="px-5 py-2.5 text-right">
                         <select
                           className={`px-2 py-1 border rounded-lg text-xs font-bold outline-none transition-all cursor-pointer ${
                             (editingAttendance[member.id] || 'hadir') === 'hadir' ? 'bg-green-50 text-green-700 border-green-200 focus:ring-green-500/20 focus:border-green-500' :

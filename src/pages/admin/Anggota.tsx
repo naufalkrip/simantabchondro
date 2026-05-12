@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { getMembers, addMember, deleteMember, updateMember } from '../../services/memberService';
+import { getMembersList, addMember, deleteMember, updateMember } from '../../services/memberService';
 import { subscribeToDataChange } from '../../services/refreshService';
 import type { Member } from '../../types/member';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { exportModernPDF } from '../../utils/pdfExport';
 import { Pencil, Trash2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -36,7 +35,7 @@ export const Anggota: React.FC = () => {
   });
 
   const fetchMembers = async () => {
-    const data = await getMembers();
+    const data = await getMembersList();
     setMembers(data);
     
     const existingDivisions = Array.from(new Set(data.map(m => m.divisi)));
@@ -51,7 +50,13 @@ export const Anggota: React.FC = () => {
       fetchMembers();
     });
 
-    return () => unsubscribe();
+    // Periodic polling sebagai fallback real-time
+    const interval = setInterval(fetchMembers, 30000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,23 +68,22 @@ export const Anggota: React.FC = () => {
     if (!payload.bankAccountNumber) delete payload.bankAccountNumber;
     if (!payload.bankOwnerName) delete payload.bankOwnerName;
 
-    const promise = editingId 
-      ? updateMember(editingId, payload) 
-      : addMember(payload);
+    try {
+      const res = editingId 
+        ? await updateMember(editingId, payload) 
+        : await addMember(payload);
 
-    toast.promise(promise, {
-      loading: editingId ? 'Memperbarui data...' : 'Menambahkan anggota...',
-      success: (res) => {
-        if (res) {
-          setIsModalOpen(false);
-          resetForm();
-          fetchMembers();
-          return editingId ? 'Data berhasil diperbarui' : 'Anggota berhasil ditambahkan';
-        }
+      if (res) {
+        setIsModalOpen(false);
+        resetForm();
+        await fetchMembers();
+        toast.success(editingId ? 'Data berhasil diperbarui' : 'Anggota berhasil ditambahkan');
+      } else {
         throw new Error('Gagal menyimpan data');
-      },
-      error: 'Terjadi kesalahan sistem'
-    });
+      }
+    } catch {
+      toast.error('Terjadi kesalahan sistem');
+    }
 
     setIsSubmitting(false);
   };
@@ -122,16 +126,13 @@ export const Anggota: React.FC = () => {
     const { id, name } = deleteConfirm;
     setDeleteConfirm(prev => ({ ...prev, isOpen: false }));
     
-    const promise = deleteMember(id);
-
-    toast.promise(promise, {
-      loading: `Menghapus ${name}...`,
-      success: () => {
-        fetchMembers();
-        return `Anggota ${name} berhasil dihapus`;
-      },
-      error: 'Gagal menghapus anggota'
-    });
+    try {
+      await deleteMember(id);
+      await fetchMembers();
+      toast.success(`Anggota ${name} berhasil dihapus`);
+    } catch {
+      toast.error('Gagal menghapus anggota');
+    }
   };
 
   const handleAddDivision = () => {
@@ -144,72 +145,49 @@ export const Anggota: React.FC = () => {
     setIsAddingDivision(false);
   };
 
-  const handleDownloadPDF = () => {
-    try {
-      const doc = new jsPDF();
-      
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      doc.text('SIMANTAB - Laporan Data Anggota', 14, 20);
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 28);
+  const handleDownloadPDF = async () => {
+    if (members.length === 0) {
+      toast.error('Tidak ada data anggota untuk didownload');
+      return;
+    }
 
-      const tableColumn = ["No", "Nama", "No HP", "Divisi"];
-      let currentY = 35;
-
-      const grouped = divisions.reduce((acc, div) => {
-        const filtered = members.filter(m => m.divisi === div);
-        if (filtered.length > 0) acc[div] = filtered;
-        return acc;
-      }, {} as Record<string, Member[]>);
-
-      if (Object.keys(grouped).length === 0) {
-        toast.error('Tidak ada data anggota untuk didownload');
-        return;
+    // Sort by Division then by Name
+    const sortedMembers = [...members].sort((a, b) => {
+      if (a.divisi === b.divisi) {
+        return a.name.localeCompare(b.name);
       }
+      return a.divisi.localeCompare(b.divisi);
+    });
 
-      Object.entries(grouped).forEach(([division, membersList]) => {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        doc.text(`Divisi: ${division}`, 14, currentY);
-        currentY += 5;
+    const tableData = sortedMembers.map((m, index) => [
+      index + 1,
+      m.name,
+      m.phone,
+      m.divisi
+    ]);
 
-        const tableRows = membersList.map((m, i) => [
-          i + 1,
-          m.name,
-          m.phone,
-          m.divisi
-        ]);
-
-        autoTable(doc, {
-          head: [tableColumn],
-          body: tableRows,
-          startY: currentY,
-          styles: { fontSize: 9 },
-          headStyles: { fillColor: [185, 28, 28] },
-          margin: { left: 14, right: 14 }
-        });
-
-        currentY = (doc as any).lastAutoTable.finalY + 10;
-        if (currentY > 260) {
-          doc.addPage();
-          currentY = 20;
+    const toastId = toast.loading('Membuat laporan PDF...');
+    try {
+      await exportModernPDF({
+        title: 'Laporan Data Anggota',
+        filename: `Laporan_Anggota_SIMANTAB_${new Date().toISOString().split('T')[0]}`,
+        columns: ['No', 'Nama', 'No HP', 'Divisi'],
+        data: tableData,
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 30 },
+          2: { cellWidth: 100 },
+          3: { halign: 'center', cellWidth: 80 }
         }
       });
-
-      doc.save('Laporan_Anggota_SIMANTAB.pdf');
-      toast.success('Laporan PDF berhasil diunduh');
+      toast.success('Laporan PDF berhasil diunduh', { id: toastId });
     } catch (error) {
-      console.error('PDF Error:', error);
-      toast.error('Gagal membuat PDF');
+      toast.error('Gagal membuat PDF', { id: toastId });
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white p-3 md:p-4 border-b border-gray-200 rounded-xl shadow-sm">
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white px-4 py-3 border-b border-gray-200 rounded-xl shadow-sm">
         <div>
           <h2 className="text-base md:text-lg font-semibold text-gray-800 leading-tight">Manajemen Anggota</h2>
           <p className="text-[10px] md:text-xs text-gray-500 mt-0.5">Kelola dan organisir anggota berdasarkan divisi</p>
@@ -373,40 +351,40 @@ export const Anggota: React.FC = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-50/50 text-gray-400 text-xs border-b border-gray-100 font-bold">
-                      <th className="px-6 py-3 font-bold">Nama Anggota</th>
-                      <th className="px-6 py-3 font-bold">Telepon</th>
-                      <th className="px-6 py-3 font-bold text-right">Aksi</th>
-                      <th className="px-6 py-3 font-bold text-right">Gabung</th>
+                      <th className="px-4 py-2.5 font-bold">Nama Anggota</th>
+                      <th className="px-4 py-2.5 font-bold">Telepon</th>
+                      <th className="px-4 py-2.5 font-bold text-right">Aksi</th>
+                      <th className="px-4 py-2.5 font-bold text-right">Gabung</th>
                     </tr>
                   </thead>
                   <tbody className="text-sm divide-y divide-gray-50">
                     {divisionMembers.map((member) => (
                       <tr key={member?.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3">
                           <p className="font-bold text-gray-800 text-sm">{member?.name || 'Unknown'}</p>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3">
                           <div className="text-gray-500 text-xs font-medium">
                             {member?.phone || '-'}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-1">
                             <button 
                               onClick={() => handleEdit(member)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             >
                               <Pencil size={14} />
                             </button>
                             <button 
                               onClick={() => handleDelete(member.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             >
                               <Trash2 size={14} />
                             </button>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right font-medium text-gray-400 text-xs">
+                        <td className="px-4 py-3 text-right font-medium text-gray-400 text-xs">
                           {member?.joinedDate}
                         </td>
                       </tr>

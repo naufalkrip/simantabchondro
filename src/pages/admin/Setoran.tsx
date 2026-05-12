@@ -76,8 +76,8 @@ export const Setoran: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-3 md:p-4 border-b border-gray-200 rounded-xl shadow-sm">
+    <div className="space-y-4">
+      <div className="bg-white px-4 py-3 border-b border-gray-200 rounded-xl shadow-sm">
         <h2 className="text-base md:text-lg font-semibold text-gray-800">Verifikasi Setoran</h2>
         <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">Setujui atau tolak bukti transfer dari anggota</p>
       </div>
@@ -172,20 +172,20 @@ export const Setoran: React.FC = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/50 text-gray-400 text-[10px] uppercase border-b border-gray-100 font-black tracking-widest">
-                <th className="px-4 py-3">Anggota</th>
-                <th className="px-4 py-3">Tanggal</th>
-                <th className="px-4 py-3">Nominal</th>
-                <th className="px-4 py-3">Bukti</th>
-                <th className="px-4 py-3 text-right">Status</th>
+                <th className="px-4 py-2.5">Anggota</th>
+                <th className="px-4 py-2.5">Tanggal</th>
+                <th className="px-4 py-2.5">Nominal</th>
+                <th className="px-4 py-2.5">Bukti</th>
+                <th className="px-4 py-2.5 text-right">Status</th>
               </tr>
             </thead>
             <tbody className="text-sm divide-y divide-gray-50">
               {history.length > 0 ? history.slice(0, 20).map((tx) => (
                 <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-bold text-gray-800">{tx.member?.name}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{tx.date}</td>
-                  <td className="px-4 py-3 font-bold text-green-700">{formatCurrency(tx.amount)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2.5 font-bold text-gray-800">{tx.member?.name}</td>
+                  <td className="px-4 py-2.5 text-gray-500 text-xs">{tx.date}</td>
+                  <td className="px-4 py-2.5 font-bold text-green-700">{formatCurrency(tx.amount)}</td>
+                  <td className="px-4 py-2.5">
                     {tx.proof_url ? (
                       <button 
                         onClick={() => setSelectedProofUrl(tx.proof_url || null)}
@@ -196,7 +196,7 @@ export const Setoran: React.FC = () => {
                       </button>
                     ) : '-'}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-2.5 text-right">
                     <span className={clsx(
                       "px-2 py-0.5 rounded-sm text-[10px] font-black uppercase border",
                       tx.status === 'approved' ? "bg-green-50 text-green-600 border-green-100" : "bg-red-50 text-red-600 border-red-100"

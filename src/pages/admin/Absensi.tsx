@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { getMembers } from '../../services/memberService';
 import { getAttendanceByDate, saveAttendance } from '../../services/attendanceService';
+import { subscribeToDataChange } from '../../services/refreshService';
 import type { Member } from '../../types/member';
 import { ArrowUpDown, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
@@ -53,6 +54,13 @@ export const Absensi: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+
+    // Subscribe to real-time changes
+    const unsubscribe = subscribeToDataChange(() => {
+      fetchData();
+    });
+
+    return () => unsubscribe();
   }, [date]);
 
   const handleStatusChange = (memberId: string, status: 'hadir' | 'izin' | 'bolos') => {
@@ -80,7 +88,7 @@ export const Absensi: React.FC = () => {
         if (res) return 'Data absensi berhasil disimpan';
         throw new Error('Gagal menyimpan');
       },
-      error: 'Terjadi kesalahan sistem'
+      error: (err) => `Gagal: ${err.message || 'Terjadi kesalahan sistem'}`
     });
 
     setIsSaving(false);
@@ -96,8 +104,8 @@ export const Absensi: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white p-3 md:p-4 border-b border-gray-200 rounded-md shadow-sm">
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white px-4 py-3 border-b border-gray-200 rounded-md shadow-sm">
         <div>
           <h2 className="text-lg font-semibold text-gray-800 leading-tight">Input Absensi</h2>
           <p className="text-xs text-gray-500 mt-0.5">Catat kehadiran anggota MB Chondro hari ini</p>
@@ -148,8 +156,8 @@ export const Absensi: React.FC = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/50 text-gray-400 text-[10px] uppercase border-b border-gray-100 font-black tracking-widest">
-                <th className="px-4 py-3 font-bold">Nama Anggota</th>
-                <th className="px-4 py-3 font-bold flex items-center gap-1.5">
+                <th className="px-4 py-2.5 font-bold">Nama Anggota</th>
+                <th className="px-4 py-2.5 font-bold flex items-center gap-1.5">
                   Divisi
                   <button
                     onClick={rotateDivisionOrder}
@@ -158,7 +166,7 @@ export const Absensi: React.FC = () => {
                     <ArrowUpDown size={10} />
                   </button>
                 </th>
-                <th className="px-4 py-3 font-bold text-right">Status Kehadiran</th>
+                <th className="px-4 py-2.5 font-bold text-right">Status Kehadiran</th>
               </tr>
             </thead>
             <tbody className="text-sm divide-y divide-gray-50">
@@ -166,13 +174,13 @@ export const Absensi: React.FC = () => {
                 const divMembers = members.filter(m => m.divisi === div);
                 return divMembers.map((member) => (
                   <tr key={member?.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3 font-bold text-gray-800 text-[13px]">{member?.name || 'Unknown'}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2.5 font-bold text-gray-800 text-[13px]">{member?.name || 'Unknown'}</td>
+                    <td className="px-4 py-2.5">
                       <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-sm text-[10px] font-black border border-gray-200 uppercase tracking-tight">
                         {member?.divisi}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-2.5 text-right">
                       <select
                         className={`px-2 py-1 border rounded-md text-xs font-bold outline-none transition-all cursor-pointer ${
                           (attendance[member.id] || 'hadir') === 'hadir' ? 'bg-green-50 text-green-700 border-green-200 focus:ring-green-500/20 focus:border-green-500' :

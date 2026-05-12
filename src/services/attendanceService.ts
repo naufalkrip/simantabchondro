@@ -18,20 +18,24 @@ export const getAttendanceByDate = async (date: string): Promise<Attendance[]> =
 
 export const saveAttendance = async (attendanceRecords: Omit<Attendance, 'id'>[]): Promise<boolean> => {
   try {
-    // Supabase supports upsert. We'll use member_id and date as the unique constraint if possible, 
-    // but without knowing the schema perfectly, we'll try to upsert based on id if it existed, 
-    // or just insert/update manually.
-    // For simplicity and assuming member_id + date is unique in the DB:
-    const { error } = await supabase
-      .from('attendance')
-      .upsert(attendanceRecords, { onConflict: 'member_id,date' });
+    console.log('Saving attendance records via RPC:', attendanceRecords);
+    
+    // Menggunakan RPC untuk menghindari masalah RLS dan mempermudah bulk upsert
+    const { error } = await supabase.rpc('save_attendance', { 
+      records: attendanceRecords 
+    });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase RPC Error (save_attendance):', error);
+      throw error;
+    }
+    
     notifyDataChange();
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving attendance:', error);
-    return false;
+    // Jika RPC belum ada, fallback ke upsert manual (opsional, tapi lebih baik lempar error agar tahu)
+    throw error;
   }
 };
 

@@ -17,7 +17,7 @@ import { Jadwal } from './pages/admin/Jadwal';
 import { Pengaturan } from './pages/admin/Pengaturan';
 
 import { KeuanganChondro } from './pages/admin/KeuanganChondro';
-import { KeuanganMedia } from './pages/admin/KeuanganMedia';
+import { ManajemenMedia } from './pages/admin/ManajemenMedia';
 
 import { MemberLayout } from './layouts/MemberLayout';
 import { Dashboard as MemberDashboard } from './pages/member/Dashboard';
@@ -27,55 +27,73 @@ import { Pengaturan as MemberPengaturan } from './pages/member/Pengaturan';
 import { Jadwal as MemberJadwal } from './pages/member/Jadwal';
 import { Toaster } from 'sonner';
 
+// AnimatePresence will be handled in Layout components to prevent sidebar remounting
+function AnimatedRoutes() {
+  return (
+    <Routes>
+        <Route path="/" element={<Navigate to="/member/login" replace />} />
+        <Route path="/member/login" element={<MemberLogin />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+
+        {/* Member Protected Routes */}
+        <Route path="/member" element={
+          <ProtectedRoute allowedRole="member">
+            <MemberLayout />
+          </ProtectedRoute>
+        }>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<MemberDashboard />} />
+          <Route path="absensi" element={<MemberAbsensi />} />
+          <Route path="savings" element={<MemberTabungan />} />
+          <Route path="jadwal" element={<MemberJadwal />} />
+          <Route path="pengaturan" element={<MemberPengaturan />} />
+          <Route path="*" element={<Navigate to="dashboard" replace />} />
+        </Route>
+
+        {/* Admin Protected Routes */}
+        <Route path="/admin" element={
+          <ProtectedRoute allowedRole="admin">
+            <MainLayout />
+          </ProtectedRoute>
+        }>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="members" element={<Anggota />} />
+          <Route path="absensi" element={<Absensi />} />
+          <Route path="absensi-riwayat" element={<AbsensiRiwayat />} />
+          <Route path="absensi-rekap" element={<AbsensiRekap />} />
+          <Route path="savings" element={<Tabungan />} />
+          <Route path="setoran" element={<Setoran />} />
+          <Route path="penarikan" element={<Penarikan />} />
+          <Route path="keuangan-chondro" element={<KeuanganChondro />} />
+          <Route path="manajemen-media" element={<ManajemenMedia />} />
+          <Route path="jadwal" element={<Jadwal />} />
+          <Route path="pengaturan" element={<Pengaturan />} />
+          <Route path="*" element={<Navigate to="dashboard" replace />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/member/login" replace />} />
+      </Routes>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
-      <Toaster position="top-right" richColors closeButton />
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        toastOptions={{
+          style: {
+            borderRadius: '8px',
+            fontSize: '13px',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
+          },
+        }}
+      />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/member/login" replace />} />
-          <Route path="/member/login" element={<MemberLogin />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          
-          {/* Member Protected Routes */}
-          <Route path="/member" element={
-            <ProtectedRoute allowedRole="member">
-              <MemberLayout />
-            </ProtectedRoute>
-          }>
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<MemberDashboard />} />
-            <Route path="absensi" element={<MemberAbsensi />} />
-            <Route path="savings" element={<MemberTabungan />} />
-            <Route path="jadwal" element={<MemberJadwal />} />
-            <Route path="pengaturan" element={<MemberPengaturan />} />
-            <Route path="*" element={<Navigate to="dashboard" replace />} />
-          </Route>
-          
-          {/* Admin Protected Routes */}
-          <Route path="/admin" element={
-            <ProtectedRoute allowedRole="admin">
-              <MainLayout />
-            </ProtectedRoute>
-          }>
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="members" element={<Anggota />} />
-            <Route path="absensi" element={<Absensi />} />
-            <Route path="absensi-riwayat" element={<AbsensiRiwayat />} />
-            <Route path="absensi-rekap" element={<AbsensiRekap />} />
-            <Route path="savings" element={<Tabungan />} />
-            <Route path="setoran" element={<Setoran />} />
-            <Route path="penarikan" element={<Penarikan />} />
-            <Route path="keuangan-chondro" element={<KeuanganChondro />} />
-            <Route path="keuangan-media" element={<KeuanganMedia />} />
-            <Route path="jadwal" element={<Jadwal />} />
-            <Route path="pengaturan" element={<Pengaturan />} />
-            <Route path="*" element={<Navigate to="dashboard" replace />} />
-          </Route>
-
-          <Route path="*" element={<Navigate to="/member/login" replace />} />
-        </Routes>
+        <AnimatedRoutes />
       </BrowserRouter>
     </AuthProvider>
   );
