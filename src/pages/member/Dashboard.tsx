@@ -4,7 +4,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { getAttendanceByDateRange } from '../../services/attendanceService';
 import { getTransactions } from '../../services/transactionService';
-import { getMembers } from '../../services/memberService';
+import { getMembers, computeMemberBalances } from '../../services/memberService';
 import { subscribeToDataChange } from '../../services/refreshService';
 import type { Attendance } from '../../types/attendance';
 import type { Transaction } from '../../types/transaction';
@@ -47,9 +47,10 @@ export const Dashboard: React.FC = () => {
         getMembers()
       ]);
 
+      const membersWithBalance = computeMemberBalances(membersData, transData);
       const myAttendance = attData.filter(a => a.member_id === memberId);
       const myTransactions = transData.filter(t => t.member_id === memberId);
-      const myProfile = membersData.find(m => m.id === memberId) || null;
+      const myProfile = membersWithBalance.find(m => m.id === memberId) || null;
 
       setAttendance(myAttendance);
       setTransactions(myTransactions);

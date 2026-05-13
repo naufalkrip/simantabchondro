@@ -15,7 +15,7 @@ export const getFinanceData = async (category: 'pengurus' | 'media'): Promise<Fi
     .from('finance')
     .select('*')
     .eq('category', category)
-    .order('date', { ascending: false });
+    .order('date', { ascending: true });
 
   if (error) {
     console.error('Error fetching finance data:', error);

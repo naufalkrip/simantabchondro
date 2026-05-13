@@ -6,9 +6,9 @@ import { Modal } from '../../components/ui/Modal';
 import { getFinanceData, saveFinanceTransaction, deleteFinanceTransaction, updateFinanceTransaction } from '../../services/financeService';
 import { subscribeToDataChange } from '../../services/refreshService';
 import type { FinanceTransaction } from '../../services/financeService';
-import { PlusCircle, MinusCircle, Wallet, Trash2, Pencil, Activity } from 'lucide-react';
+import { PlusCircle, MinusCircle, Wallet, Trash2, Pencil, Activity, Download, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
-
+import { exportFinancePDF } from '../../utils/pdfExport';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 
@@ -32,6 +32,11 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
     id: '',
     description: ''
   });
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfStartDate, setPdfStartDate] = useState('');
+  const [pdfEndDate, setPdfEndDate] = useState('');
+  const [pdfAllHistory, setPdfAllHistory] = useState(true);
 
   const fetchData = async () => {
     const data = await getFinanceData(category);
@@ -143,6 +148,13 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
           <h2 className="text-base md:text-lg font-semibold text-gray-800 leading-tight">{title}</h2>
           <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">Manajemen dana dan riwayat transaksi {category === 'pengurus' ? 'Chondro' : category}</p>
         </div>
+        <button
+          onClick={() => setIsPdfModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-red-700 hover:bg-red-800 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
+        >
+          <Download size={16} />
+          Download PDF
+        </button>
       </div>
 
       {/* Summary Card */}
@@ -282,6 +294,78 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
         title="Hapus Transaksi Keuangan"
         message={`Apakah Anda yakin ingin menghapus transaksi "${deleteConfirm.description}"? Saldo akan disesuaikan kembali.`}
       />
+
+      <Modal isOpen={isPdfModalOpen} onClose={() => { setIsPdfModalOpen(false); setPdfAllHistory(true); setPdfStartDate(''); setPdfEndDate(''); }} title={`Download ${title}`} maxWidth="md">
+        <div className="space-y-4">
+          <p className="text-xs text-gray-500">Atur rentang tanggal atau download seluruh riwayat transaksi.</p>
+
+          <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+            <input
+              type="checkbox"
+              checked={pdfAllHistory}
+              onChange={e => { setPdfAllHistory(e.target.checked); if (!e.target.checked) { setPdfStartDate(''); setPdfEndDate(''); } }}
+              className="w-4 h-4 text-red-600 rounded"
+            />
+            <div>
+              <p className="text-sm font-bold text-gray-800">Seluruh Riwayat Transaksi</p>
+              <p className="text-xs text-gray-500">Download semua data tanpa batas tanggal</p>
+            </div>
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Tanggal Mulai</label>
+              <input
+                type="date"
+                value={pdfStartDate}
+                disabled={pdfAllHistory}
+                onChange={e => setPdfStartDate(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500 disabled:bg-gray-50 disabled:text-gray-400"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Tanggal Akhir</label>
+              <input
+                type="date"
+                value={pdfEndDate}
+                disabled={pdfAllHistory}
+                onChange={e => setPdfEndDate(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-red-500 disabled:bg-gray-50 disabled:text-gray-400"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={async () => {
+              setPdfLoading(true);
+              const label = category === 'pengurus' ? 'Chondro' : 'Media';
+              try {
+                await exportFinancePDF(
+                  category,
+                  `Rekap Dana ${label}`,
+                  `rekap-dana-${category}`,
+                  pdfAllHistory ? undefined : pdfStartDate || undefined,
+                  pdfAllHistory ? undefined : pdfEndDate || undefined
+                );
+                toast.success('PDF berhasil didownload');
+                setIsPdfModalOpen(false);
+                setPdfAllHistory(true);
+                setPdfStartDate('');
+                setPdfEndDate('');
+              } catch {
+                toast.error('Gagal mendownload PDF');
+              } finally {
+                setPdfLoading(false);
+              }
+            }}
+            disabled={pdfLoading}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-700 hover:bg-red-800 disabled:bg-red-400 text-white text-sm font-bold rounded-xl transition-colors"
+          >
+            {pdfLoading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+            {pdfLoading ? 'Mendownload...' : 'Download PDF'}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 };

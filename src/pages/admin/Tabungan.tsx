@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Wallet, PlusCircle, MinusCircle, FileText, Search, Pencil, Trash2, Calendar } from 'lucide-react';
-import { getMembers } from '../../services/memberService';
+import { getMembers, computeMemberBalances } from '../../services/memberService';
 import { getTransactions, addTransaction, deleteTransaction, updateTransaction } from '../../services/transactionService';
 import type { Member } from '../../types/member';
 import type { Transaction } from '../../types/transaction';
@@ -48,11 +48,12 @@ export const Tabungan: React.FC = () => {
       getTransactions()
     ]);
     
-    setMembers(memberData);
+    const membersWithBalance = computeMemberBalances(memberData, transactionData);
+    setMembers(membersWithBalance);
     setTransactions(transactionData);
     
     // Calculate total system balance from approved transactions
-    const total = memberData.reduce((acc, m) => acc + (m.totalBalance || 0), 0);
+    const total = membersWithBalance.reduce((acc, m) => acc + (m.totalBalance || 0), 0);
     setTotalBalance(total);
   };
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { getTransactions, addTransaction, deleteTransaction } from '../../services/transactionService';
-import { getMembers } from '../../services/memberService';
+import { getMembers, computeMemberBalances } from '../../services/memberService';
 import { subscribeToDataChange } from '../../services/refreshService';
 import type { Transaction } from '../../types/transaction';
 import type { Member } from '../../types/member';
@@ -52,8 +52,9 @@ export const Tabungan: React.FC = () => {
       getTransactions(),
       getMembers()
     ]);
+    const membersWithBalance = computeMemberBalances(membersData, transData);
     const myTransactions = transData.filter(t => t.member_id === memberId);
-    const myProfile = membersData.find(m => m.id === memberId) || null;
+    const myProfile = membersWithBalance.find(m => m.id === memberId) || null;
     setTransactions(myTransactions);
     setMember(myProfile);
 
