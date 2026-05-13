@@ -36,12 +36,16 @@ export const Setoran: React.FC = () => {
   useEffect(() => {
     fetchData();
 
-    // Subscribe to real-time changes
     const unsubscribe = subscribeToDataChange(() => {
       fetchData();
     });
 
-    return () => unsubscribe();
+    const pollInterval = setInterval(() => fetchData(), 15000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(pollInterval);
+    };
   }, []);
 
   const handleProcessRequest = async (id: string, status: 'approved' | 'rejected') => {

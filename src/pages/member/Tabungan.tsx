@@ -59,12 +59,16 @@ export const Tabungan: React.FC = () => {
   useEffect(() => {
     fetchData();
 
-    // Subscribe to real-time changes
     const unsubscribe = subscribeToDataChange(() => {
       fetchData();
     });
 
-    return () => unsubscribe();
+    const pollInterval = setInterval(() => fetchData(), 15000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(pollInterval);
+    };
   }, [memberId]);
 
   const handleDepositSubmit = async (e: React.FormEvent) => {

@@ -46,12 +46,16 @@ export const Penarikan: React.FC = () => {
   useEffect(() => {
     fetchData();
 
-    // Subscribe to real-time changes
     const unsubscribe = subscribeToDataChange(() => {
       fetchData();
     });
 
-    return () => unsubscribe();
+    const pollInterval = setInterval(() => fetchData(), 15000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(pollInterval);
+    };
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

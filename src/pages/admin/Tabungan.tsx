@@ -61,7 +61,11 @@ export const Tabungan: React.FC = () => {
     const unsubscribe = subscribeToDataChange(() => {
       fetchData();
     });
-    return () => unsubscribe();
+    const pollInterval = setInterval(() => fetchData(), 15000);
+    return () => {
+      unsubscribe();
+      clearInterval(pollInterval);
+    };
   }, [fetchData]);
 
   const divisions = useMemo(
