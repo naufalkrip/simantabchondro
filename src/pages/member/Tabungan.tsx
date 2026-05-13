@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
-import { getTransactions, addTransaction, deleteTransaction } from '../../services/transactionService';
-import { getMembers, computeMemberBalances } from '../../services/memberService';
+import { getTransactionsFiltered, addTransaction, deleteTransaction } from '../../services/transactionService';
+import { getMemberById } from '../../services/memberService';
 import { subscribeToDataChange } from '../../services/refreshService';
 import type { Transaction } from '../../types/transaction';
 import type { Member } from '../../types/member';
@@ -48,16 +48,12 @@ export const Tabungan: React.FC = () => {
 
   const fetchData = async () => {
     if (!memberId) return;
-    const [transData, membersData] = await Promise.all([
-      getTransactions(),
-      getMembers()
+    const [myTransactions, myProfile] = await Promise.all([
+      getTransactionsFiltered({ member_id: memberId }),
+      getMemberById(memberId),
     ]);
-    const membersWithBalance = computeMemberBalances(membersData, transData);
-    const myTransactions = transData.filter(t => t.member_id === memberId);
-    const myProfile = membersWithBalance.find(m => m.id === memberId) || null;
     setTransactions(myTransactions);
     setMember(myProfile);
-
   };
 
   useEffect(() => {

@@ -1,5 +1,4 @@
 import { supabase } from './supabaseClient';
-import { queryClient } from '../lib/queryClient';
 
 // Global Data Refresh Service using BroadcastChannel AND Supabase Realtime
 // This allows real-time updates across different components, browser tabs, and even different devices.
@@ -18,20 +17,18 @@ localChannel.onmessage = (event) => {
 };
 
 // 2. Initialize Supabase Realtime (for cross-device/server-side updates)
-// Penting: Pastikan "Realtime" diaktifkan untuk tabel-tabel di Dashboard Supabase
-supabase.channel('public_changes')
+// Mendengarkan hanya tabel transactions untuk mengurangi beban dan biaya
+supabase.channel('tabungan_changes')
   .on(
     'postgres_changes',
     {
-      event: '*', // Listen to INSERT, UPDATE, DELETE
-      schema: 'public'
+      event: '*',
+      schema: 'public',
+      table: 'transactions'
     },
     (payload) => {
       console.log('Realtime update received from Supabase:', payload);
-      // Trigger refresh for all local listeners
       listeners.forEach(callback => callback());
-      // Invalidate React Query cache
-      queryClient.invalidateQueries();
     }
   )
   .subscribe((status) => {
@@ -45,10 +42,8 @@ supabase.channel('public_changes')
 export const notifyDataChange = () => {
   console.log('Notifying data change locally...');
   console.trace('notifyDataChange called');
-  // Notify same tab
+  // Notify same tab listeners
   listeners.forEach(callback => callback());
-  // Invalidate React Query cache
-  queryClient.invalidateQueries();
   // Notify other tabs on same browser
   localChannel.postMessage(DATA_CHANGE_EVENT);
 };

@@ -31,6 +31,34 @@ export const getMembers = async (): Promise<Member[]> => {
   return (members || []).map(mapMember);
 };
 
+export const getMemberById = async (id: string): Promise<Member | null> => {
+  try {
+    const { data: member, error } = await supabase
+      .from('members')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error || !member) return null;
+
+    const { data: txData } = await supabase
+      .from('transactions')
+      .select('type, amount')
+      .eq('member_id', id)
+      .eq('status', 'approved');
+
+    const balance = (txData || []).reduce(
+      (acc, t) => t.type === 'setoran' ? acc + t.amount : acc - t.amount,
+      0
+    );
+
+    return { ...mapMember(member), totalBalance: balance };
+  } catch (error) {
+    console.error('Error fetching member by ID:', error);
+    return null;
+  }
+};
+
 export const computeMemberBalances = (members: Member[], transactions: Transaction[]): Member[] => {
   return members.map(m => {
     const memberTx = transactions.filter(t => t.member_id === m.id && t.status === 'approved');

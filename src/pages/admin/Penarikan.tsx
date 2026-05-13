@@ -4,7 +4,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Minus, Check, X, Users, CreditCard, Info, Plus, Image as ImageIcon } from 'lucide-react';
-import { getTransactions, updateTransactionStatus } from '../../services/transactionService';
+import { getTransactionsFiltered, updateTransactionStatus } from '../../services/transactionService';
 import { getMembers } from '../../services/memberService';
 import { subscribeToDataChange } from '../../services/refreshService';
 import type { Transaction } from '../../types/transaction';
@@ -32,13 +32,13 @@ export const Penarikan: React.FC = () => {
 
   const fetchData = async () => {
     setIsLoading(true);
-    const [transactions, memberData] = await Promise.all([
-      getTransactions(),
+    const [pendingData, historyData, memberData] = await Promise.all([
+      getTransactionsFiltered({ type: 'penarikan', status: 'pending' }),
+      getTransactionsFiltered({ type: 'penarikan', status: 'approved', limit: 20 }),
       getMembers()
     ]);
-    const typeTransactions = transactions.filter(t => t.type === 'penarikan');
-    setPendingRequests(typeTransactions.filter(t => t.status === 'pending'));
-    setHistory(typeTransactions.filter(t => t.status !== 'pending').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    setPendingRequests(pendingData);
+    setHistory(historyData);
     setMembers(memberData);
     setIsLoading(false);
   };
@@ -96,7 +96,6 @@ export const Penarikan: React.FC = () => {
       success: (res) => {
         if (res) {
           setIsConfirmModalOpen(false);
-          fetchData();
           return `Penarikan berhasil ${status === 'approved' ? 'disetujui' : 'ditolak'}`;
         }
         throw new Error('Gagal memproses');

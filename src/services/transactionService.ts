@@ -14,6 +14,46 @@ export const getTransactions = async (): Promise<Transaction[]> => {
   return data || [];
 };
 
+interface FilterOptions {
+  type?: 'setoran' | 'penarikan';
+  status?: 'pending' | 'approved' | 'rejected';
+  member_id?: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export const getTransactionsFiltered = async (options: FilterOptions = {}): Promise<Transaction[]> => {
+  try {
+    let query = supabase
+      .from('transactions')
+      .select('*, member:member_id(name)')
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (options.type) query = query.eq('type', options.type);
+    if (options.status) query = query.eq('status', options.status);
+    if (options.member_id) query = query.eq('member_id', options.member_id);
+    if (options.startDate) query = query.gte('date', options.startDate);
+    if (options.endDate) query = query.lte('date', options.endDate);
+    if (options.limit) query = query.limit(options.limit);
+    if (options.offset && options.limit) query = query.range(options.offset, options.offset + options.limit - 1);
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching filtered transactions:', error);
+      return [];
+    }
+
+    return (data as unknown as Transaction[]) || [];
+  } catch (error) {
+    console.error('Error in getTransactionsFiltered:', error);
+    return [];
+  }
+};
+
 export const addTransaction = async (transaction: Omit<Transaction, 'id' | 'created_at' | 'member'>): Promise<boolean> => {
   try {
     console.log('Adding transaction via RPC:', transaction);

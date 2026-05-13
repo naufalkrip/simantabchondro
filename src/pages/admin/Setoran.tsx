@@ -4,7 +4,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Plus, Check, X, Image as ImageIcon, Info } from 'lucide-react';
-import { getTransactions, updateTransactionStatus } from '../../services/transactionService';
+import { getTransactionsFiltered, updateTransactionStatus } from '../../services/transactionService';
 import { subscribeToDataChange } from '../../services/refreshService';
 import type { Transaction } from '../../types/transaction';
 import { toast } from 'sonner';
@@ -24,10 +24,12 @@ export const Setoran: React.FC = () => {
 
   const fetchData = async () => {
     setIsLoading(true);
-    const transactions = await getTransactions();
-    const typeTransactions = transactions.filter(t => t.type === 'setoran');
-    setPendingRequests(typeTransactions.filter(t => t.status === 'pending'));
-    setHistory(typeTransactions.filter(t => t.status !== 'pending').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    const [pendingData, historyData] = await Promise.all([
+      getTransactionsFiltered({ type: 'setoran', status: 'pending' }),
+      getTransactionsFiltered({ type: 'setoran', status: 'approved', limit: 20 }),
+    ]);
+    setPendingRequests(pendingData);
+    setHistory(historyData);
     setIsLoading(false);
   };
 
@@ -56,7 +58,6 @@ export const Setoran: React.FC = () => {
       loading: status === 'approved' ? 'Menyetujui setoran...' : 'Menolak setoran...',
       success: (res) => {
         if (res) {
-          fetchData();
           return `Setoran berhasil ${status === 'approved' ? 'disetujui' : 'ditolak'}`;
         }
         throw new Error('Gagal memproses');

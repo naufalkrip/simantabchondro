@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Wallet, PlusCircle, MinusCircle, FileText, Search, Pencil, Trash2, Calendar } from 'lucide-react';
@@ -42,7 +42,7 @@ export const Tabungan: React.FC = () => {
   const [startDate, setStartDate] = useState(new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const [memberData, transactionData] = await Promise.all([
       getMembers(),
       getTransactions()
@@ -52,10 +52,9 @@ export const Tabungan: React.FC = () => {
     setMembers(membersWithBalance);
     setTransactions(transactionData);
     
-    // Calculate total system balance from approved transactions
     const total = membersWithBalance.reduce((acc, m) => acc + (m.totalBalance || 0), 0);
     setTotalBalance(total);
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -63,32 +62,39 @@ export const Tabungan: React.FC = () => {
       fetchData();
     });
     return () => unsubscribe();
-  }, []);
+  }, [fetchData]);
 
-  const divisions = ['Semua', ...Array.from(new Set(members.map(m => m.divisi)))];
+  const divisions = useMemo(
+    () => ['Semua', ...Array.from(new Set(members.map(m => m.divisi)))],
+    [members]
+  );
 
-  const filteredMembers = members.filter(m => {
-    const matchesSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesDivision = selectedDivision === 'Semua' || m.divisi === selectedDivision;
-    return matchesSearch && matchesDivision;
-  });
+  const filteredMembers = useMemo(
+    () => members.filter(m => {
+      const matchesSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesDivision = selectedDivision === 'Semua' || m.divisi === selectedDivision;
+      return matchesSearch && matchesDivision;
+    }),
+    [members, searchQuery, selectedDivision]
+  );
 
-  const getFilteredTransactions = () => {
-    return transactions.filter(t => {
+  const filteredTransactions = useMemo(
+    () => transactions.filter(t => {
       const tDate = t.date;
       return tDate >= startDate && tDate <= endDate;
-    });
-  };
+    }),
+    [transactions, startDate, endDate]
+  );
+
+  const getFilteredTransactions = useCallback(() => filteredTransactions, [filteredTransactions]);
 
   const downloadHistoryPDF = async () => {
-    const filtered = getFilteredTransactions();
-
-    if (filtered.length === 0) {
+    if (filteredTransactions.length === 0) {
       toast.error('Tidak ada transaksi untuk diunduh');
       return;
     }
 
-    const tableData = filtered.map(t => [
+    const tableData = filteredTransactions.map(t => [
       t.member?.name || 'Unknown',
       `${t.date} ${t.created_at ? new Date(t.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}`,
       t.type === 'setoran' ? 'SETORAN' : 'PENARIKAN',
@@ -183,10 +189,7 @@ export const Tabungan: React.FC = () => {
 
     toast.promise(promise, {
       loading: 'Menghapus transaksi...',
-      success: () => {
-        fetchData();
-        return 'Transaksi berhasil dihapus';
-      },
+      success: () => 'Transaksi berhasil dihapus',
       error: 'Gagal menghapus transaksi'
     });
   };
@@ -238,7 +241,6 @@ export const Tabungan: React.FC = () => {
           setIsInputModalOpen(false);
           setEditingId(null);
           setFormData({ type: 'setoran', memberId: '', nominal: '', note: '' });
-          fetchData();
           return editingId ? 'Transaksi berhasil diperbarui' : 'Transaksi berhasil disimpan';
         }
         throw new Error('Gagal menyimpan');
@@ -817,7 +819,7 @@ export const Tabungan: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="text-sm divide-y divide-gray-50">
-                {getFilteredTransactions().length > 0 ? getFilteredTransactions().map((tx) => (
+                {filteredTransactions.length > 0 ? filteredTransactions.map((tx) => (
                   <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-4 py-3 font-bold text-gray-800 text-sm">{tx.member?.name || 'Unknown'}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
