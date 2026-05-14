@@ -90,8 +90,6 @@ export const Tabungan: React.FC = () => {
     [transactions, startDate, endDate]
   );
 
-  const getFilteredTransactions = useCallback(() => filteredTransactions, [filteredTransactions]);
-
   const downloadHistoryPDF = async () => {
     if (filteredTransactions.length === 0) {
       toast.error('Tidak ada transaksi untuk diunduh');
