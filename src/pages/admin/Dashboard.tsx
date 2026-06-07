@@ -1,163 +1,126 @@
-import React, { useMemo } from 'react';
-import { Users, Calendar, Drum, Wallet, Trophy } from 'lucide-react';
-import { Card } from '../../components/ui/Card';
-
-import { getMembers } from '../../services/memberService';
-import { getAttendanceByDateRange } from '../../services/attendanceService';
-import { useQuery } from '@tanstack/react-query';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animations';
+import {
+  Users, CalendarCheck, Wallet, Calendar,
+} from 'lucide-react';
+import { staggerContainer } from '../../lib/animations';
+import { useDashboardData } from '../../hooks/useDashboardData';
+import { HeroSection } from '../../components/dashboard/HeroSection';
+import { StatCard } from '../../components/dashboard/StatCard';
+import { AttendanceRanking } from '../../components/dashboard/AttendanceRanking';
+import { RecentActivity } from '../../components/dashboard/RecentActivity';
+import { QuickActions } from '../../components/dashboard/QuickActions';
+import { Skeleton } from '../../components/ui/Skeleton';
 
 export const Dashboard: React.FC = () => {
-  const currentMonthName = new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date());
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  const {
+    membersLoading,
+    chartLoading,
+    totalAnggota,
+    monthlyStats,
+    monthlyPerformances,
+    chartData,
+    attendanceRanking,
+    activities,
+    totalSavings,
+    attendanceTrend,
+    savingsTrend,
+  } = useDashboardData();
 
-  const { data: members = [] } = useQuery({
-    queryKey: ['members'],
-    queryFn: getMembers
-  });
-
-  const { data: attendanceData = [] } = useQuery({
-    queryKey: ['attendance', startOfMonth, endOfMonth],
-    queryFn: () => getAttendanceByDateRange(startOfMonth, endOfMonth)
-  });
-
-  const monthlyAttendance = useMemo(() => {
-    if (attendanceData.length === 0) return 0;
-    const hadirCount = attendanceData.filter(d => d.status === 'hadir').length;
-    return Math.round((hadirCount / attendanceData.length) * 100);
-  }, [attendanceData]);
-
-  const monthlyPerformances = useMemo(() => {
-    const uniqueDates = new Set(attendanceData.map(d => d.date));
-    return uniqueDates.size;
-  }, [attendanceData]);
-
-  const totalAnggota = Array.isArray(members) ? members.length : 0;
-
-  const attendanceRanking = useMemo(() => {
-    if (members.length === 0 || attendanceData.length === 0) return [];
-    
-    return members
-      .map(member => {
-        const mRecords = attendanceData.filter(d => d.member_id === member.id);
-        const hadir = mRecords.filter(d => d.status === 'hadir').length;
-        const izin = mRecords.filter(d => d.status === 'izin').length;
-        const bolos = mRecords.filter(d => d.status === 'bolos').length;
-        return { ...member, hadir, izin, bolos };
-      })
-      .sort((a, b) => {
-        if (a.divisi < b.divisi) return -1;
-        if (a.divisi > b.divisi) return 1;
-        return b.hadir - a.hadir;
-      });
-  }, [members, attendanceData]);
+  const isLoading = membersLoading;
 
   return (
-    <div className="space-y-4">
-      {/* Quick Navigation / Welcome Banner - Minimalist Version */}
-      <div className="px-5 py-4 bg-gradient-to-r from-red-700 to-red-900 text-white shadow-sm rounded-md overflow-hidden relative group">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h3 className="text-sm md:text-lg font-semibold mb-0.5 text-left leading-tight">Kelola SIMANTAB lebih mudah</h3>
-            <p className="text-red-50/80 text-[9px] md:text-xs max-w-xl leading-relaxed text-left">
-              Semua data anggota, absensi, tabungan, keuangan kini terpusat dalam satu dashboard yang modern dan responsif.
-            </p>
-          </div>
+    <div className="space-y-6">
+      {/* Hero Section */}
+      <HeroSection
+        username="admin"
+        chartData={chartData}
+        chartLoading={chartLoading}
+      />
 
-        </div>
-        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
-          <Wallet size={40} className="md:size-[56px]" />
-        </div>
-      </div>
-
-      {/* Overview Cards - Flat Style */}
-      <motion.div 
+      {/* Stats Grid */}
+      <motion.div
         variants={staggerContainer}
         initial="initial"
         animate="animate"
-        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5"
       >
-        <motion.div variants={staggerItem} className="p-4 md:p-5 bg-white border border-gray-200 rounded-xl shadow-sm flex items-center gap-3 md:gap-4 transition-all hover:shadow-md hover:border-red-100">
-          <div className="p-2.5 md:p-3.5 rounded-lg bg-red-50 text-red-600 shrink-0">
-            <Users size={20} className="md:w-6 md:h-6" />
-          </div>
-          <div>
-            <p className="text-[9px] md:text-xs font-black text-gray-400 uppercase tracking-widest leading-none mb-1.5 md:mb-3">Total Anggota</p>
-            <p className="text-2xl md:text-3xl font-black text-gray-900 leading-none">{totalAnggota}</p>
-          </div>
-        </motion.div>
-
-        <motion.div variants={staggerItem} className="p-4 md:p-5 bg-white border border-gray-200 rounded-xl shadow-sm flex items-center gap-3 md:gap-4 transition-all hover:shadow-md hover:border-blue-100">
-          <div className="p-2.5 md:p-3.5 rounded-lg bg-blue-50 text-blue-600 shrink-0">
-            <Calendar size={20} className="md:w-6 md:h-6" />
-          </div>
-          <div>
-            <p className="text-[9px] md:text-xs font-black text-gray-400 uppercase tracking-widest leading-none mb-1.5 md:mb-3">Kehadiran {currentMonthName}</p>
-            <p className="text-2xl md:text-3xl font-black text-gray-900 leading-none">{monthlyAttendance}%</p>
-          </div>
-        </motion.div>
-
-        <motion.div variants={staggerItem} className="p-4 md:p-5 bg-white border border-gray-200 rounded-xl shadow-sm flex items-center gap-3 md:gap-4 transition-all hover:shadow-md hover:border-purple-100">
-          <div className="p-2.5 md:p-3.5 rounded-lg bg-purple-50 text-purple-600 shrink-0">
-            <Drum size={20} className="md:w-6 md:h-6" />
-          </div>
-          <div>
-            <p className="text-[9px] md:text-xs font-black text-gray-400 uppercase tracking-widest leading-none mb-1.5 md:mb-3">Tampilan {currentMonthName}</p>
-            <p className="text-2xl md:text-3xl font-black text-gray-900 leading-none">{monthlyPerformances} <span className="text-[10px] font-medium text-gray-400">Kegiatan</span></p>
-          </div>
-        </motion.div>
+        {isLoading ? (
+          <>
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} variant="card" className="h-32" />
+            ))}
+          </>
+        ) : (
+          <>
+            <StatCard
+              title="Total Anggota"
+              value={totalAnggota}
+              icon={Users}
+              trend={20}
+              trendLabel="dibanding bulan lalu"
+              iconBg="bg-red-50 dark:bg-red-900/20"
+              iconColor="text-red-600 dark:text-red-400"
+              accentBorder="hover:border-red-200 dark:hover:border-red-800/50"
+            />
+            <StatCard
+              title="Kehadiran Bulan Ini"
+              value={`${monthlyStats.percentage}%`}
+              icon={CalendarCheck}
+              trend={attendanceTrend}
+              trendLabel="dibanding bulan lalu"
+              iconBg="bg-emerald-50 dark:bg-emerald-900/20"
+              iconColor="text-emerald-600 dark:text-emerald-400"
+              accentBorder="hover:border-emerald-200 dark:hover:border-emerald-800/50"
+            />
+            <StatCard
+              title="Total Tabungan"
+              value={totalSavings}
+              icon={Wallet}
+              trend={savingsTrend}
+              trendLabel="dibanding bulan lalu"
+              iconBg="bg-blue-50 dark:bg-blue-900/20"
+              iconColor="text-blue-600 dark:text-blue-400"
+              accentBorder="hover:border-blue-200 dark:hover:border-blue-800/50"
+              formatValue={(val) => `Rp${Number(val).toLocaleString('id-ID')}`}
+            />
+            <StatCard
+              title="Total Kegiatan"
+              value={monthlyPerformances}
+              icon={Calendar}
+              trend={0}
+              trendLabel="dibanding bulan lalu"
+              iconBg="bg-violet-50 dark:bg-violet-900/20"
+              iconColor="text-violet-600 dark:text-violet-400"
+              accentBorder="hover:border-violet-200 dark:hover:border-violet-800/50"
+            />
+          </>
+        )}
       </motion.div>
 
-      {/* Attendance Ranking Table */}
-      <Card className="overflow-hidden border-gray-200">
-        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Trophy size={16} className="text-yellow-500" />
-            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Peringkat Kehadiran {currentMonthName}</h3>
-          </div>
-          <div className="flex gap-4 text-[9px] font-black text-gray-400 uppercase">
-            <span className="w-10 text-center">Hadir</span>
-            <span className="w-10 text-center">Izin</span>
-            <span className="w-10 text-center">Bolos</span>
-          </div>
+      {/* Bottom Grid: 3 columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Column 1: Attendance Ranking */}
+        <div className="lg:col-span-1">
+          <AttendanceRanking
+            data={attendanceRanking}
+            isLoading={membersLoading}
+          />
         </div>
-        <motion.div 
-          variants={staggerContainer}
-          initial="initial"
-          animate="animate"
-          className="divide-y divide-gray-50 max-h-[400px] overflow-y-auto"
-        >
-          {attendanceRanking.length > 0 ? (
-            attendanceRanking.map((member, index) => (
-              <motion.div variants={staggerItem} key={member.id} className="px-5 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-6 flex justify-center">
-                    <span className="text-[11px] font-black text-gray-300">{index + 1}</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-800">{member.name}</p>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">{member.divisi}</p>
-                  </div>
-                </div>
-                <div className="flex gap-4 font-black">
-                  <div className="w-10 text-center text-xs text-green-600 bg-green-50 py-1.5 rounded-lg border border-green-100/30">{member.hadir}</div>
-                  <div className="w-10 text-center text-xs text-yellow-600 bg-yellow-50 py-1.5 rounded-lg border border-yellow-100/30">{member.izin}</div>
-                  <div className="w-10 text-center text-xs text-red-600 bg-red-50 py-1.5 rounded-lg border border-red-100/30">{member.bolos}</div>
-                </div>
-              </motion.div>
-            ))
-          ) : (
-            <div className="p-10 text-center text-gray-400 text-sm italic">
-              Belum ada data absensi untuk bulan ini.
-            </div>
-          )}
-        </motion.div>
-      </Card>
+
+        {/* Column 2: Recent Activity */}
+        <div className="lg:col-span-1">
+          <RecentActivity
+            activities={activities}
+            isLoading={membersLoading}
+          />
+        </div>
+
+        {/* Column 3: Quick Actions */}
+        <div className="lg:col-span-1">
+          <QuickActions />
+        </div>
+      </div>
     </div>
   );
 };
-
-

@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Minus, Check, X, Users, CreditCard, Info, Plus, Image as ImageIcon } from 'lucide-react';
 import { getTransactionsFiltered, updateTransactionStatus } from '../../services/transactionService';
-import { getMembers } from '../../services/memberService';
+import { getMembersBankInfo } from '../../services/memberService';
 import { subscribeToDataChange } from '../../services/refreshService';
 import type { Transaction } from '../../types/transaction';
 import type { Member } from '../../types/member';
@@ -35,7 +35,7 @@ export const Penarikan: React.FC = () => {
     const [pendingData, historyData, memberData] = await Promise.all([
       getTransactionsFiltered({ type: 'penarikan', status: 'pending' }),
       getTransactionsFiltered({ type: 'penarikan', status: 'approved', limit: 20 }),
-      getMembers()
+      getMembersBankInfo()
     ]);
     setPendingRequests(pendingData);
     setHistory(historyData);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sidebar } from '../components/layout/Sidebar';
-import { Header } from '../components/layout/Header';
+import { TopNavigation } from '../components/layout/TopNavigation';
+import { MobileBottomNav } from '../components/layout/MobileBottomNav';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { pageVariants } from '../lib/animations';
@@ -14,27 +15,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
 
   return (
-    <div className="w-full min-h-screen flex bg-gray-100 font-sans">
+    <div className="w-full min-h-screen flex bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-200">
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
-      {/* Overlay for mobile */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
-        <div className="flex-1 overflow-y-auto relative p-4 md:p-5 w-full">
-          <div className="md:max-w-7xl md:mx-auto w-full h-full">
+        <TopNavigation toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <div className="flex-1 overflow-y-auto relative p-4 md:p-6 lg:p-8 pb-20 md:pb-6 lg:pb-8 w-full">
+          <div className="max-w-7xl mx-auto w-full">
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
@@ -50,6 +37,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </div>
         </div>
       </div>
+
+      <MobileBottomNav />
     </div>
   );
 };

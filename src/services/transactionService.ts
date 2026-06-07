@@ -28,7 +28,7 @@ export const getTransactionsFiltered = async (options: FilterOptions = {}): Prom
   try {
     let query = supabase
       .from('transactions')
-      .select('*')
+      .select('*, member:members(name)')
       .order('date', { ascending: false })
       .order('created_at', { ascending: false });
 
@@ -47,20 +47,7 @@ export const getTransactionsFiltered = async (options: FilterOptions = {}): Prom
       return [];
     }
 
-    if (!txData || txData.length === 0) return [];
-
-    const memberIds = [...new Set(txData.map((t: any) => t.member_id))];
-    const { data: members } = await supabase
-      .from('members')
-      .select('id, name')
-      .in('id', memberIds);
-
-    const memberMap = new Map((members || []).map((m: any) => [m.id, m.name]));
-
-    return txData.map((t: any) => ({
-      ...t,
-      member: { name: memberMap.get(t.member_id) || 'Unknown' }
-    })) as unknown as Transaction[];
+    return (txData || []) as unknown as Transaction[];
   } catch (error) {
     console.error('Error in getTransactionsFiltered:', error);
     return [];

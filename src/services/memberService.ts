@@ -9,7 +9,7 @@ const mapMember = (m: any): Member => ({
   phone: m.phone,
   joinedDate: m.joined_date || m.created_at || new Date().toISOString(),
   divisi: m.divisi,
-  totalBalance: 0,
+  totalBalance: m.total_balance || 0,
   bankOwnerName: m.bank_owner_name,
   bankAccountNumber: m.bank_account_number,
   bankName: m.bank_name,
@@ -65,6 +65,32 @@ export const computeMemberBalances = (members: Member[], transactions: Transacti
     const computedBalance = memberTx.reduce((acc, t) => t.type === 'setoran' ? acc + t.amount : acc - t.amount, 0);
     return { ...m, totalBalance: computedBalance };
   });
+};
+
+export const getMembersBankInfo = async (): Promise<Member[]> => {
+  const { data: members, error } = await supabase
+    .from('members')
+    .select('id, name, divisi, bank_name, bank_account_number, bank_owner_name')
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching members:', error);
+    return [];
+  }
+
+  return (members || []).map((m: any) => ({
+    id: m.id,
+    name: m.name,
+    phone: '',
+    joinedDate: '',
+    divisi: m.divisi || '',
+    totalBalance: 0,
+    bankOwnerName: m.bank_owner_name,
+    bankAccountNumber: m.bank_account_number,
+    bankName: m.bank_name,
+    username: '',
+    password: '',
+  }));
 };
 
 export const getMembersList = async (): Promise<Member[]> => {

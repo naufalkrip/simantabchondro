@@ -1,18 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import clsx from 'clsx';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Plus, Check, X, Image as ImageIcon, Info } from 'lucide-react';
 import { getTransactionsFiltered, updateTransactionStatus } from '../../services/transactionService';
+import { getMembers } from '../../services/memberService';
 import { subscribeToDataChange } from '../../services/refreshService';
 import type { Transaction } from '../../types/transaction';
+import type { Member } from '../../types/member';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 
 export const Setoran: React.FC = () => {
   const [pendingRequests, setPendingRequests] = useState<Transaction[]>([]);
   const [history, setHistory] = useState<Transaction[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
@@ -22,12 +25,27 @@ export const Setoran: React.FC = () => {
     name: ''
   });
 
+  const memberMap = useMemo(() => {
+    const map = new Map<string, string>();
+    members.forEach(m => map.set(m.id, m.name));
+    return map;
+  }, [members]);
+
+  const getMemberName = (id?: string) => id ? memberMap.get(id) || '-' : '-';
+
   const fetchData = async () => {
     setIsLoading(true);
-    const [pendingData, historyData] = await Promise.all([
-      getTransactionsFiltered({ type: 'setoran', status: 'pending' }),
-      getTransactionsFiltered({ type: 'setoran', status: 'approved', limit: 20 }),
+    const now = new Date();
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const startDate = sixMonthsAgo.toISOString().split('T')[0];
+
+    const [membersData, pendingData, historyData] = await Promise.all([
+      getMembers(),
+      getTransactionsFiltered({ type: 'setoran', status: 'pending', startDate }),
+      getTransactionsFiltered({ type: 'setoran', status: 'approved', startDate, limit: 20 }),
     ]);
+    setMembers(membersData);
     setPendingRequests(pendingData);
     setHistory(historyData);
     setIsLoading(false);
@@ -51,7 +69,7 @@ export const Setoran: React.FC = () => {
   const handleProcessRequest = async (id: string, status: 'approved' | 'rejected') => {
     if (status === 'rejected' && !rejectConfirm.isOpen) {
       const req = pendingRequests.find(r => r.id === id);
-      setRejectConfirm({ isOpen: true, id, name: req?.member?.name || 'Anggota' });
+      setRejectConfirm({ isOpen: true, id, name: getMemberName(req?.member_id) });
       return;
     }
 
@@ -100,7 +118,7 @@ export const Setoran: React.FC = () => {
                       <Plus size={18} className="md:w-5 md:h-5" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-gray-900">{req.member?.name}</p>
+                      <p className="text-sm font-bold text-gray-900">{getMemberName(req.member_id)}</p>
                       <p className="text-[10px] text-gray-400 uppercase font-medium">
                         {new Date(req.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </p>
@@ -187,7 +205,7 @@ export const Setoran: React.FC = () => {
             <tbody className="text-sm divide-y divide-gray-50">
               {history.length > 0 ? history.slice(0, 20).map((tx) => (
                 <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-2.5 font-bold text-gray-800">{tx.member?.name}</td>
+                  <td className="px-4 py-2.5 font-bold text-gray-800">{getMemberName(tx.member_id)}</td>
                   <td className="px-4 py-2.5 text-gray-500 text-xs">{tx.date}</td>
                   <td className="px-4 py-2.5 font-bold text-green-700">{formatCurrency(tx.amount)}</td>
                   <td className="px-4 py-2.5">
@@ -225,7 +243,7 @@ export const Setoran: React.FC = () => {
             <div key={tx.id} className="p-4 space-y-3">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-[13px] font-bold text-gray-900 leading-tight">{tx.member?.name}</p>
+                  <p className="text-[13px] font-bold text-gray-900 leading-tight">{getMemberName(tx.member_id)}</p>
                   <p className="text-[10px] text-gray-400 mt-1 uppercase font-medium">{tx.date}</p>
                 </div>
                 <span className={clsx(

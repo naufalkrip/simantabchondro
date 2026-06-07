@@ -26,6 +26,7 @@ import { Tabungan as MemberTabungan } from './pages/member/Tabungan';
 import { Pengaturan as MemberPengaturan } from './pages/member/Pengaturan';
 import { Jadwal as MemberJadwal } from './pages/member/Jadwal';
 import { Toaster } from 'sonner';
+import { ThemeProvider } from './context/ThemeContext';
 
 // AnimatePresence will be handled in Layout components to prevent sidebar remounting
 function AnimatedRoutes() {
@@ -79,23 +80,25 @@ function AnimatedRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Toaster
-        position="top-right"
-        richColors
-        closeButton
-        toastOptions={{
-          style: {
-            borderRadius: '8px',
-            fontSize: '13px',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
-          },
-        }}
-      />
-      <BrowserRouter>
-        <AnimatedRoutes />
-      </BrowserRouter>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+          toastOptions={{
+            style: {
+              borderRadius: '8px',
+              fontSize: '13px',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
+            },
+          }}
+        />
+        <BrowserRouter>
+          <AnimatedRoutes />
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
