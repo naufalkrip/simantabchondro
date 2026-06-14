@@ -29,7 +29,13 @@ const menuItems = [
       { path: '/admin/penarikan', label: 'Penarikan', icon: ArrowDownRight },
     ]
   },
-  { path: '/admin/keuangan-chondro', icon: Banknote, label: 'Keuangan Chondro' },
+  {
+    path: '/admin/keuangan-chondro', icon: Banknote, label: 'Keuangan Chondro',
+    subItems: [
+      { path: '/admin/keuangan-chondro', label: 'Ringkasan', icon: Banknote },
+      { path: '/admin/keuangan-chondro/transaksi', label: 'Transaksi Lainnya', icon: FileText },
+    ]
+  },
   { path: '/admin/manajemen-media', icon: MonitorPlay, label: 'Media' },
   { path: '/admin/jadwal', icon: Calendar, label: 'Jadwal' },
   { path: '/admin/pengaturan', icon: Settings, label: 'Pengaturan' },

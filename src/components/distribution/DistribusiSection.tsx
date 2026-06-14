@@ -459,7 +459,7 @@ export const DistribusiSection: React.FC<DistribusiSectionProps> = ({ date, loca
                               idx === i ? { ...rec, paid: newPaid, amount: newPaid ? nominalPerAnggota : 0 } : rec
                             ));
                           }}
-                          className={`px-3 py-1 rounded-md text-[11px] font-bold border outline-none cursor-pointer transition-all ${
+                          className={`px-4 py-2.5 rounded-lg text-sm font-bold border outline-none cursor-pointer transition-all ${
                             r.paid
                               ? 'bg-green-50 text-green-700 border-green-200'
                               : 'bg-gray-50 text-gray-500 border-gray-200'
@@ -501,7 +501,7 @@ export const DistribusiSection: React.FC<DistribusiSectionProps> = ({ date, loca
                           idx === i ? { ...rec, paid: newPaid, amount: newPaid ? nominalPerAnggota : 0 } : rec
                         ));
                       }}
-                      className={`px-3 py-1 rounded-md text-[11px] font-bold border outline-none cursor-pointer transition-all ${
+                      className={`px-4 py-3 rounded-xl text-sm font-bold border outline-none cursor-pointer transition-all ${
                         r.paid
                           ? 'bg-green-50 text-green-700 border-green-200'
                           : 'bg-gray-50 text-gray-500 border-gray-200'

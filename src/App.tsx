@@ -19,6 +19,7 @@ import { Pengaturan } from './pages/admin/Pengaturan';
 import { KeuanganChondro } from './pages/admin/KeuanganChondro';
 import { ManajemenMedia } from './pages/admin/ManajemenMedia';
 import { DistribusiDana } from './pages/admin/DistribusiDana';
+import { TransaksiLain } from './pages/admin/TransaksiLain';
 
 import { MemberLayout } from './layouts/MemberLayout';
 import { Dashboard as MemberDashboard } from './pages/member/Dashboard';
@@ -69,6 +70,7 @@ function AnimatedRoutes() {
           <Route path="setoran" element={<Setoran />} />
           <Route path="penarikan" element={<Penarikan />} />
           <Route path="keuangan-chondro" element={<KeuanganChondro />} />
+          <Route path="keuangan-chondro/transaksi" element={<TransaksiLain />} />
           <Route path="manajemen-media" element={<ManajemenMedia />} />
           <Route path="jadwal" element={<Jadwal />} />
           <Route path="pengaturan" element={<Pengaturan />} />
