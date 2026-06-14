@@ -1,8 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Home, CalendarCheck, Wallet, Calendar, Settings, LogOut,
-  ChevronDown
+  Home, CalendarCheck, Wallet, Calendar, Settings, LogOut
 } from 'lucide-react';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';

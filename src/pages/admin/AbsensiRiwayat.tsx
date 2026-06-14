@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { getMembers } from '../../services/memberService';
-import { getAttendanceByDate, saveAttendance, getAttendanceHistory } from '../../services/attendanceService';
+import { getAttendanceByDateAndLocation, saveAttendance, getAttendanceHistory } from '../../services/attendanceService';
 import { subscribeToDataChange } from '../../services/refreshService';
 import type { Member } from '../../types/member';
 import { ChevronDown, History, Info } from 'lucide-react';
@@ -33,7 +33,7 @@ export const AbsensiRiwayat: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingDate, setEditingDate] = useState('');
   const [editingLocation, setEditingLocation] = useState('');
-  const [editingAttendance, setEditingAttendance] = useState<Record<string, 'hadir' | 'izin' | 'bolos'>>({});
+  const [editingAttendance, setEditingAttendance] = useState<Record<string, 'hadir' | 'izin' | 'bolos' | 'tampil'>>({});
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const loadData = async () => {
@@ -66,8 +66,8 @@ export const AbsensiRiwayat: React.FC = () => {
     setEditingDate(selectedDate);
     setEditingLocation(selectedLocation);
 
-    const existingAttendance = await getAttendanceByDate(selectedDate);
-    const attendanceMap: Record<string, 'hadir' | 'izin' | 'bolos'> = {};
+    const existingAttendance = await getAttendanceByDateAndLocation(selectedDate, selectedLocation);
+    const attendanceMap: Record<string, 'hadir' | 'izin' | 'bolos' | 'tampil'> = {};
 
     // Initialize with present status for all members
     members.forEach(m => {
@@ -82,7 +82,7 @@ export const AbsensiRiwayat: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleStatusChangeEdit = (memberId: string, status: 'hadir' | 'izin' | 'bolos') => {
+  const handleStatusChangeEdit = (memberId: string, status: 'hadir' | 'izin' | 'bolos' | 'tampil') => {
     setEditingAttendance(prev => ({
       ...prev,
       [memberId]: status
@@ -157,7 +157,7 @@ export const AbsensiRiwayat: React.FC = () => {
           {filteredHistory.length > 0 ? (
             filteredHistory.map((item) => (
               <button
-                key={item.date}
+                key={`${item.date}|${item.location}`}
                 onClick={() => handleEditHistory(item.date, item.location)}
                 className="group relative bg-white p-4 rounded-xl border border-gray-100 hover:border-blue-300 hover:shadow-md transition-all text-left overflow-hidden"
               >
@@ -228,6 +228,7 @@ export const AbsensiRiwayat: React.FC = () => {
                         <select
                           className={`px-2 py-1 border rounded-lg text-xs font-bold outline-none transition-all cursor-pointer ${
                             (editingAttendance[member.id] || 'hadir') === 'hadir' ? 'bg-green-50 text-green-700 border-green-200 focus:ring-green-500/20 focus:border-green-500' :
+                            (editingAttendance[member.id] || 'hadir') === 'tampil' ? 'bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500/20 focus:border-purple-500' :
                             (editingAttendance[member.id] || 'hadir') === 'izin' ? 'bg-yellow-50 text-yellow-700 border-yellow-200 focus:ring-yellow-500/20 focus:border-yellow-500' :
                             'bg-red-50 text-red-700 border-red-200 focus:ring-red-500/20 focus:border-red-500'
                           }`}
@@ -235,6 +236,7 @@ export const AbsensiRiwayat: React.FC = () => {
                           onChange={(e) => handleStatusChangeEdit(member.id, e.target.value as any)}
                         >
                           <option value="hadir">Hadir</option>
+                          <option value="tampil">Tampil</option>
                           <option value="izin">Izin</option>
                           <option value="bolos">Bolos</option>
                         </select>
@@ -256,6 +258,7 @@ export const AbsensiRiwayat: React.FC = () => {
                   <select
                     className={`px-3 py-1.5 border rounded-lg text-[11px] font-bold outline-none transition-all cursor-pointer ${
                       (editingAttendance[member.id] || 'hadir') === 'hadir' ? 'bg-green-50 text-green-700 border-green-200' :
+                      (editingAttendance[member.id] || 'hadir') === 'tampil' ? 'bg-purple-50 text-purple-700 border-purple-200' :
                       (editingAttendance[member.id] || 'hadir') === 'izin' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
                       'bg-red-50 text-red-700 border-red-200'
                     }`}
@@ -263,6 +266,7 @@ export const AbsensiRiwayat: React.FC = () => {
                     onChange={(e) => handleStatusChangeEdit(member.id, e.target.value as any)}
                   >
                     <option value="hadir">Hadir</option>
+                    <option value="tampil">Tampil</option>
                     <option value="izin">Izin</option>
                     <option value="bolos">Bolos</option>
                   </select>

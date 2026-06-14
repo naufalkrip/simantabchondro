@@ -5,6 +5,13 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Inter", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-poppins: "Poppins", sans-serif;
+
+  --color-primary: #D6001C;
+  --color-primary-dark: #A30015;
+
+  --shadow-card: 0 2px 20px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-red-glow: 0 4px 16px rgba(214, 0, 28, 0.2);
 }
 
 html, body, #root {
@@ -65,8 +72,8 @@ input, textarea, select {
 
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: #b91c1c !important;
-  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.10) !important;
+  border-color: var(--color-primary, #D6001C) !important;
+  box-shadow: 0 0 0 3px rgba(214, 0, 28, 0.12) !important;
 }
 
 /* ─── Shake Animation (form validation error) ──────────────────────────────── */

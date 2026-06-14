@@ -18,6 +18,7 @@ import { Pengaturan } from './pages/admin/Pengaturan';
 
 import { KeuanganChondro } from './pages/admin/KeuanganChondro';
 import { ManajemenMedia } from './pages/admin/ManajemenMedia';
+import { DistribusiDana } from './pages/admin/DistribusiDana';
 
 import { MemberLayout } from './layouts/MemberLayout';
 import { Dashboard as MemberDashboard } from './pages/member/Dashboard';
@@ -63,6 +64,7 @@ function AnimatedRoutes() {
           <Route path="absensi" element={<Absensi />} />
           <Route path="absensi-riwayat" element={<AbsensiRiwayat />} />
           <Route path="absensi-rekap" element={<AbsensiRekap />} />
+          <Route path="distribusi-dana" element={<DistribusiDana />} />
           <Route path="savings" element={<Tabungan />} />
           <Route path="setoran" element={<Setoran />} />
           <Route path="penarikan" element={<Penarikan />} />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { getMembers } from '../../services/memberService';
-import { getAttendanceByDate, saveAttendance } from '../../services/attendanceService';
+import { getAttendanceByDateAndLocation, saveAttendance } from '../../services/attendanceService';
 import { subscribeToDataChange } from '../../services/refreshService';
 import type { Member } from '../../types/member';
 import { ArrowUpDown, Calendar as CalendarIcon } from 'lucide-react';
@@ -11,13 +11,13 @@ export const Absensi: React.FC = () => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [location, setLocation] = useState('');
   const [members, setMembers] = useState<Member[]>([]);
-  const [attendance, setAttendance] = useState<Record<string, 'hadir' | 'izin' | 'bolos'>>({});
+  const [attendance, setAttendance] = useState<Record<string, 'hadir' | 'izin' | 'bolos' | 'tampil'>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [divisionOrder, setDivisionOrder] = useState<string[]>([]);
 
-  const fetchData = async () => {
+  const fetchData = async (selectedLocation: string) => {
     const fetchedMembers = await getMembers();
-    const existingAttendance = await getAttendanceByDate(date);
+    const existingAttendance = await getAttendanceByDateAndLocation(date, selectedLocation);
 
     const divisions = Array.from(new Set(fetchedMembers.map(m => m.divisi)));
 
@@ -29,41 +29,35 @@ export const Absensi: React.FC = () => {
       setDivisionOrder(newOrder);
     }
 
-    const attendanceMap: Record<string, 'hadir' | 'izin' | 'bolos'> = {};
+    const attendanceMap: Record<string, 'hadir' | 'izin' | 'bolos' | 'tampil'> = {};
 
     fetchedMembers.forEach(m => {
       attendanceMap[m.id] = 'hadir';
     });
 
-    if (existingAttendance.length > 0) {
-      existingAttendance.forEach(record => {
-        attendanceMap[record.member_id] = record.status;
-      });
-      if (existingAttendance[0].location) {
-        setLocation(existingAttendance[0].location);
-      } else {
-        setLocation('');
-      }
-    } else {
-      setLocation('');
-    }
+    existingAttendance.forEach(record => {
+      attendanceMap[record.member_id] = record.status;
+    });
 
     setMembers(fetchedMembers);
     setAttendance(attendanceMap);
   };
 
   useEffect(() => {
-    fetchData();
-
-    // Subscribe to real-time changes
-    const unsubscribe = subscribeToDataChange(() => {
-      fetchData();
-    });
-
-    return () => unsubscribe();
+    if (location) {
+      fetchData(location);
+    } else {
+      fetchData('');
+    }
   }, [date]);
 
-  const handleStatusChange = (memberId: string, status: 'hadir' | 'izin' | 'bolos') => {
+  useEffect(() => {
+    if (location) {
+      fetchData(location);
+    }
+  }, [location]);
+
+  const handleStatusChange = (memberId: string, status: 'hadir' | 'izin' | 'bolos' | 'tampil') => {
     setAttendance(prev => ({
       ...prev,
       [memberId]: status
@@ -71,13 +65,18 @@ export const Absensi: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (!location.trim()) {
+      toast.error('Lokasi / sesi harus diisi');
+      return;
+    }
+
     setIsSaving(true);
 
     const recordsToSave = members.map(member => ({
       member_id: member.id,
       date: date,
       status: attendance[member.id] || 'hadir',
-      location: location
+      location: location.trim()
     }));
 
     const promise = saveAttendance(recordsToSave);
@@ -85,13 +84,22 @@ export const Absensi: React.FC = () => {
     toast.promise(promise, {
       loading: 'Menyimpan data absensi...',
       success: (res) => {
-        if (res) return 'Data absensi berhasil disimpan';
+        if (res) {
+          return 'Data absensi berhasil disimpan';
+        }
         throw new Error('Gagal menyimpan');
       },
       error: (err) => `Gagal: ${err.message || 'Terjadi kesalahan sistem'}`
     });
 
     setIsSaving(false);
+  };
+
+  const handleLocationChange = (value: string) => {
+    setLocation(value);
+    if (value) {
+      fetchData(value);
+    }
   };
 
   const rotateDivisionOrder = () => {
@@ -114,8 +122,8 @@ export const Absensi: React.FC = () => {
 
       <div className="p-4 bg-white border border-gray-200 rounded-md shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-          <div className="md:col-span-3">
-            <label className="block text-xs font-semibold text-gray-400  mb-1.5">Tanggal Kegiatan</label>
+          <div className="md:col-span-2">
+            <label className="block text-xs font-semibold text-gray-400 mb-1.5">Tanggal</label>
             <div className="relative">
               <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
               <input
@@ -126,22 +134,33 @@ export const Absensi: React.FC = () => {
               />
             </div>
           </div>
-          <div className="md:col-span-6">
-            <label className="block text-xs font-semibold text-gray-400  mb-1.5">Keterangan / Lokasi Kegiatan</label>
+          <div className="md:col-span-4">
+            <label className="block text-xs font-semibold text-gray-400 mb-1.5">Sesi / Lokasi Kegiatan</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Contoh: Latihan Rutin, Perform GOR"
+                className="flex-1 px-3 py-1.5 border border-gray-200 rounded-md focus:ring-2 focus:ring-red-500/20 focus:border-red-500 text-sm font-medium outline-none transition-all bg-gray-50/30"
+                value={location}
+                onChange={(e) => handleLocationChange(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="md:col-span-4">
+            <label className="block text-xs font-semibold text-gray-400 mb-1.5">Keterangan Tambahan</label>
             <input
               type="text"
-              placeholder="Contoh: Latihan Rutin, Perform GOR, dll"
+              placeholder="(opsional)"
               className="w-full px-3 py-1.5 border border-gray-200 rounded-md focus:ring-2 focus:ring-red-500/20 focus:border-red-500 text-sm font-medium outline-none transition-all bg-gray-50/30"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              disabled
             />
           </div>
-          <div className="md:col-span-3">
+          <div className="md:col-span-2">
             <Button
               onClick={handleSave}
               isLoading={isSaving}
               variant="primary"
-              className="w-full h-[34px] text-xs font-bold  rounded-md"
+              className="w-full h-[34px] text-xs font-bold rounded-md"
             >
               Simpan Absensi
             </Button>
@@ -149,7 +168,6 @@ export const Absensi: React.FC = () => {
         </div>
       </div>
 
-      {/* Simplified Unified Attendance Table - Flat Style */}
       {/* Desktop View Table */}
       <div className="hidden md:block bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden mb-8">
         <div className="overflow-x-auto">
@@ -184,6 +202,7 @@ export const Absensi: React.FC = () => {
                       <select
                         className={`px-2 py-1 border rounded-md text-xs font-bold outline-none transition-all cursor-pointer ${
                           (attendance[member.id] || 'hadir') === 'hadir' ? 'bg-green-50 text-green-700 border-green-200 focus:ring-green-500/20 focus:border-green-500' :
+                          (attendance[member.id] || 'hadir') === 'tampil' ? 'bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-500/20 focus:border-purple-500' :
                           (attendance[member.id] || 'hadir') === 'izin' ? 'bg-yellow-50 text-yellow-700 border-yellow-200 focus:ring-yellow-500/20 focus:border-yellow-500' :
                           'bg-red-50 text-red-700 border-red-200 focus:ring-red-500/20 focus:border-red-500'
                         }`}
@@ -191,12 +210,14 @@ export const Absensi: React.FC = () => {
                         onChange={(e) => handleStatusChange(member.id, e.target.value as any)}
                       >
                         <option value="hadir">Hadir</option>
+                        <option value="tampil">Tampil</option>
                         <option value="izin">Izin</option>
                         <option value="bolos">Bolos</option>
                       </select>
                     </td>
                   </tr>
-                ));})}
+                ));
+              })}
             </tbody>
           </table>
         </div>
@@ -213,7 +234,7 @@ export const Absensi: React.FC = () => {
             <ArrowUpDown size={10} /> Putar Urutan
           </button>
         </div>
-        
+
         <div className="divide-y divide-gray-100 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           {divisionOrder.map((div) => {
             const divMembers = members.filter(m => m.divisi === div);
@@ -226,6 +247,7 @@ export const Absensi: React.FC = () => {
                 <select
                   className={`px-3 py-1.5 border rounded-lg text-[11px] font-bold outline-none transition-all cursor-pointer ${
                     (attendance[member.id] || 'hadir') === 'hadir' ? 'bg-green-50 text-green-700 border-green-200' :
+                    (attendance[member.id] || 'hadir') === 'tampil' ? 'bg-purple-50 text-purple-700 border-purple-200' :
                     (attendance[member.id] || 'hadir') === 'izin' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
                     'bg-red-50 text-red-700 border-red-200'
                   }`}
@@ -233,6 +255,7 @@ export const Absensi: React.FC = () => {
                   onChange={(e) => handleStatusChange(member.id, e.target.value as any)}
                 >
                   <option value="hadir">Hadir</option>
+                  <option value="tampil">Tampil</option>
                   <option value="izin">Izin</option>
                   <option value="bolos">Bolos</option>
                 </select>
@@ -244,5 +267,3 @@ export const Absensi: React.FC = () => {
     </div>
   );
 };
-
-

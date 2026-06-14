@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { RefreshCw, Eye, EyeOff, ArrowLeft, KeyRound } from 'lucide-react';
-import logo from '../../assets/logo.png';
+import { LoginLayout } from '../../components/login/LoginLayout';
+import { FloatingInput } from '../../components/login/FloatingInput';
+import { RefreshCw, Eye, EyeOff, KeyRound, Phone, Lock, Shield, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../services/supabaseClient';
 import { resetMemberPassword } from '../../services/authService';
@@ -101,7 +101,7 @@ export const MemberLogin: React.FC = () => {
         const member = data[0];
         sessionStorage.setItem('member_id', member.id);
         sessionStorage.setItem('member_name', member.name);
-        
+
         toast.success(`Selamat datang kembali, ${member.name}!`);
         login(`member-token-${member.id}`, 'member');
         navigate('/member/dashboard');
@@ -158,205 +158,174 @@ export const MemberLogin: React.FC = () => {
 
   if (mode === 'forgot') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-        <Card className="w-full max-w-md p-8 rounded-xl shadow-lg">
-          <div className="text-center mb-6">
-            <img src={logo} alt="SIMANTAB Logo" className="w-16 h-auto object-contain mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900">SIMANTAB</h1>
-            <p className="text-sm text-gray-500 mt-2">Sistem Manajemen Informasi Anggota MB Chondro</p>
-            <h2 className="text-sm font-semibold text-gray-700 mt-4 uppercase tracking-wider">Lupa Password</h2>
-          </div>
+      <LoginLayout
+        formTitle="Lupa Password"
+        onBack={switchToLogin}
+        backLabel="Kembali ke Login"
+      >
+        <form onSubmit={handleForgotSubmit} className="space-y-4">
+          <FloatingInput
+            icon={User}
+            label="Nama Anggota"
+            type="text"
+            required
+            value={forgotName}
+            onChange={(e) => setForgotName(e.target.value)}
+            placeholder="Masukkan nama lengkap"
+          />
 
-          <form onSubmit={handleForgotSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nama Anggota</label>
-              <input
-                type="text"
-                required
-                className="w-full px-4 py-2 border rounded-lg focus:ring-red-700 focus:border-red-700 outline-none"
-                placeholder="Masukkan nama lengkap"
-                value={forgotName}
-                onChange={(e) => setForgotName(e.target.value)}
-              />
-            </div>
+          <FloatingInput
+            icon={Phone}
+            label="Nomor Telepon"
+            type="tel"
+            required
+            value={forgotPhone}
+            onChange={(e) => setForgotPhone(e.target.value)}
+            placeholder="Contoh: 08123456789"
+          />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
-              <input
-                type="tel"
-                required
-                className="w-full px-4 py-2 border rounded-lg focus:ring-red-700 focus:border-red-700 outline-none"
-                placeholder="Contoh: 08123456789"
-                value={forgotPhone}
-                onChange={(e) => setForgotPhone(e.target.value)}
-              />
-            </div>
+          <FloatingInput
+            icon={Lock}
+            label="Password Baru"
+            type={showForgotPassword ? "text" : "password"}
+            required
+            value={forgotNewPassword}
+            onChange={(e) => setForgotNewPassword(e.target.value)}
+            placeholder="Minimal 3 karakter"
+            rightElement={
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(!showForgotPassword)}
+                className="text-gray-400 hover:text-primary transition-colors duration-300 p-1"
+              >
+                {showForgotPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            }
+          />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password Baru</label>
-              <div className="relative">
-                <input
-                  type={showForgotPassword ? "text" : "password"}
-                  required
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-red-700 focus:border-red-700 outline-none pr-10"
-                  placeholder="Minimal 3 karakter"
-                  value={forgotNewPassword}
-                  onChange={(e) => setForgotNewPassword(e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowForgotPassword(!showForgotPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-red-700"
-                >
-                  {showForgotPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Kode Keamanan</label>
-              <div className="flex gap-2">
-                <input
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-2">Kode Keamanan</label>
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <FloatingInput
+                  icon={Shield}
+                  label="Kode"
                   type="text"
                   required
-                  className="min-w-0 flex-1 px-3 py-2 border rounded-lg focus:ring-red-700 focus:border-red-700 outline-none uppercase text-sm"
-                  placeholder="Kode"
                   value={captchaAnswer}
                   onChange={(e) => setCaptchaAnswer(e.target.value.toUpperCase())}
                   maxLength={5}
+                  placeholder="Kode"
+                  className="uppercase tracking-wider"
                 />
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg border shrink-0">
-                  <span className="font-mono tracking-widest font-bold text-gray-800 select-none text-sm">{captchaCode}</span>
-                  <button
-                    type="button"
-                    onClick={generateCaptcha}
-                    className="text-gray-500 hover:text-gray-800 transition-colors p-1"
-                    title="Refresh CAPTCHA"
-                  >
-                    <RefreshCw size={16} />
-                  </button>
-                </div>
+              </div>
+              <div className="flex items-center gap-3 px-4 bg-gradient-to-br from-gray-50 to-white border border-gray-100 rounded-xl shadow-sm shrink-0">
+                <span className="font-mono tracking-[0.3em] font-bold text-gray-700 select-none text-base">{captchaCode}</span>
+                <button
+                  type="button"
+                  onClick={generateCaptcha}
+                  className="text-gray-400 hover:text-primary transition-all duration-300 p-1 hover:rotate-180"
+                  title="Refresh CAPTCHA"
+                >
+                  <RefreshCw size={18} />
+                </button>
               </div>
             </div>
+          </div>
 
-            <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>
-              <KeyRound size={18} className="mr-2" />
-              Ganti Password
-            </Button>
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={switchToLogin}
-                className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 font-medium"
-              >
-                <ArrowLeft size={16} />
-                Kembali ke Login
-              </button>
-            </div>
-          </form>
-        </Card>
-      </div>
+          <Button type="submit" className="w-full h-14 text-base font-semibold rounded-xl from-primary to-primary-dark shadow-red-glow hover:shadow-[0_8px_24px_rgba(214,0,28,0.35)] hover:-translate-y-0.5 transition-all duration-300" size="lg" isLoading={isLoading}>
+            <KeyRound size={18} className="mr-2" />
+            Ganti Password
+          </Button>
+        </form>
+      </LoginLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <Card className="w-full max-w-md p-8 rounded-xl shadow-lg">
-        <div className="text-center mb-6">
-          <img src={logo} alt="SIMANTAB Logo" className="w-16 h-auto object-contain mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900">SIMANTAB</h1>
-          <p className="text-sm text-gray-500 mt-2">Sistem Manajemen Informasi Anggota MB Chondro</p>
-          <h2 className="text-sm font-semibold text-gray-700 mt-4 uppercase tracking-wider">Login Anggota</h2>
-        </div>
+    <LoginLayout formTitle="Login Anggota">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <FloatingInput
+          icon={Phone}
+          label="Nomor Telepon"
+          type="tel"
+          required
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Contoh: 08123456789"
+          autoComplete="tel"
+        />
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nomor Telepon
-            </label>
-            <input
-              type="tel"
-              required
-              className="w-full px-4 py-2 border rounded-lg focus:ring-red-700 focus:border-red-700 outline-none"
-              placeholder="Contoh: 08123456789"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-          </div>
+        <FloatingInput
+          icon={Lock}
+          label="Password"
+          type={showPassword ? "text" : "password"}
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Masukkan password"
+          autoComplete="current-password"
+          rightElement={
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="text-gray-400 hover:text-primary transition-colors duration-300 p-1"
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          }
+        />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                required
-                className="w-full px-4 py-2 border rounded-lg focus:ring-red-700 focus:border-red-700 outline-none pr-10"
-                placeholder="Masukkan password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-red-700"
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Kode Keamanan
-            </label>
-            <div className="flex gap-2">
-              <input
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-2">Kode Keamanan</label>
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <FloatingInput
+                icon={Shield}
+                label="Kode"
                 type="text"
                 required
-                className="min-w-0 flex-1 px-3 py-2 border rounded-lg focus:ring-red-700 focus:border-red-700 outline-none uppercase text-sm"
-                placeholder="Kode"
                 value={captchaAnswer}
                 onChange={(e) => setCaptchaAnswer(e.target.value.toUpperCase())}
                 maxLength={5}
+                placeholder="Kode"
+                className="uppercase tracking-wider"
               />
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg border shrink-0">
-                <span className="font-mono tracking-widest font-bold text-gray-800 select-none text-sm">{captchaCode}</span>
-                <button
-                  type="button"
-                  onClick={generateCaptcha}
-                  className="text-gray-500 hover:text-gray-800 transition-colors p-1"
-                  title="Refresh CAPTCHA"
-                >
-                  <RefreshCw size={16} />
-                </button>
-              </div>
+            </div>
+            <div className="flex items-center gap-3 px-4 bg-gradient-to-br from-gray-50 to-white border border-gray-100 rounded-xl shadow-sm shrink-0">
+              <span className="font-mono tracking-[0.3em] font-bold text-gray-700 select-none text-base">{captchaCode}</span>
+              <button
+                type="button"
+                onClick={generateCaptcha}
+                className="text-gray-400 hover:text-primary transition-all duration-300 p-1 hover:rotate-180"
+                title="Refresh CAPTCHA"
+              >
+                <RefreshCw size={18} />
+              </button>
             </div>
           </div>
-
-          <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>
-            Masuk
-          </Button>
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={switchToForgot}
-              className="text-sm text-red-700 hover:text-red-800 font-medium"
-            >
-              Lupa Password?
-            </button>
-          </div>
-        </form>
-
-        <div className="mt-6 text-center">
-          <Link to="/admin/login" className="text-sm text-red-700 hover:text-red-800 font-medium">
-            Login sebagai Admin
-          </Link>
         </div>
-      </Card>
-    </div>
+
+        <Button type="submit" className="w-full h-14 text-base font-semibold rounded-xl from-primary to-primary-dark shadow-red-glow hover:shadow-[0_8px_24px_rgba(214,0,28,0.35)] hover:-translate-y-0.5 transition-all duration-300" size="lg" isLoading={isLoading}>
+          Masuk
+        </Button>
+
+        <div className="text-center pt-1">
+          <button
+            type="button"
+            onClick={switchToForgot}
+            className="text-sm font-medium text-gray-400 hover:text-primary transition-colors duration-300"
+          >
+            Lupa Password?
+          </button>
+        </div>
+      </form>
+
+      <div className="mt-7 pt-6 border-t border-gray-100 text-center">
+        <Link to="/admin/login" className="text-sm font-medium text-gray-400 hover:text-primary transition-colors duration-300">
+          Login sebagai Admin
+        </Link>
+      </div>
+    </LoginLayout>
   );
 };

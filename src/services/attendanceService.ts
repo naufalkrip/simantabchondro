@@ -2,11 +2,12 @@ import { supabase } from './supabaseClient';
 import type { Attendance } from '../types/attendance';
 import { notifyDataChange } from './refreshService';
 
-export const getAttendanceByDate = async (date: string): Promise<Attendance[]> => {
+export const getAttendanceByDateAndLocation = async (date: string, location: string): Promise<Attendance[]> => {
   const { data, error } = await supabase
     .from('attendance')
     .select('*')
-    .eq('date', date);
+    .eq('date', date)
+    .eq('location', location);
 
   if (error) {
     console.error('Error fetching attendance:', error);
@@ -18,23 +19,28 @@ export const getAttendanceByDate = async (date: string): Promise<Attendance[]> =
 
 export const saveAttendance = async (attendanceRecords: Omit<Attendance, 'id'>[]): Promise<boolean> => {
   try {
-    console.log('Saving attendance records via RPC:', attendanceRecords);
-    
-    // Menggunakan RPC untuk menghindari masalah RLS dan mempermudah bulk upsert
-    const { error } = await supabase.rpc('save_attendance', { 
-      records: attendanceRecords 
-    });
+    if (attendanceRecords.length === 0) return true;
+
+    const records = attendanceRecords.map(r => ({
+      member_id: r.member_id,
+      date: r.date,
+      status: r.status,
+      location: r.location || ''
+    }));
+
+    const { error } = await supabase
+      .from('attendance')
+      .upsert(records, { onConflict: 'member_id,date,location' });
 
     if (error) {
-      console.error('Supabase RPC Error (save_attendance):', error);
+      console.error('Supabase upsert error:', error);
       throw error;
     }
-    
+
     notifyDataChange();
     return true;
   } catch (error: any) {
     console.error('Error saving attendance:', error);
-    // Jika RPC belum ada, fallback ke upsert manual (opsional, tapi lebih baik lempar error agar tahu)
     throw error;
   }
 };
@@ -50,17 +56,18 @@ export const getAttendanceHistory = async (): Promise<{ date: string; location: 
     return [];
   }
 
-  const historyMap = new Map<string, string>();
+  const seen = new Set<string>();
+  const result: { date: string; location: string }[] = [];
+
   data?.forEach(r => {
-    if (!historyMap.has(r.date)) {
-      historyMap.set(r.date, r.location || '');
+    const key = `${r.date}|${r.location || ''}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push({ date: r.date, location: r.location || '' });
     }
   });
 
-  return Array.from(historyMap.entries()).map(([date, location]) => ({
-    date,
-    location
-  }));
+  return result;
 };
 
 export const getAttendanceByDateRange = async (startDate: string, endDate: string): Promise<Attendance[]> => {

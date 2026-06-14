@@ -18,6 +18,7 @@ const menuItems = [
       { path: '/admin/absensi', label: 'Input Absensi', icon: CalendarCheck },
       { path: '/admin/absensi-riwayat', label: 'Riwayat Absensi', icon: History },
       { path: '/admin/absensi-rekap', label: 'Rekap Absensi', icon: FileText },
+      { path: '/admin/distribusi-dana', label: 'Distribusi Dana', icon: FileText },
     ]
   },
   {
