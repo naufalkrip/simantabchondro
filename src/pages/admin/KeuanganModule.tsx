@@ -174,13 +174,13 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
       {/* Action Buttons */}
       <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 md:gap-3 mb-2 mt-2">
         <Button 
-          className="w-full md:w-auto font-bold text-xs gap-1 md:gap-2 px-2 md:px-6 py-2.5 shadow-md active:scale-95 transition-all"
+          className="w-full md:w-auto gap-1 md:gap-2"
           onClick={() => openModal('masuk')}
         >
           <PlusCircle size={16} /> Uang Masuk
         </Button>
         <Button 
-          className="w-full md:w-auto font-bold text-xs gap-1 md:gap-2 px-2 md:px-6 py-2.5 shadow-md active:scale-95 transition-all"
+          className="w-full md:w-auto gap-1 md:gap-2"
           onClick={() => openModal('keluar')}
         >
           <MinusCircle size={16} /> Uang Keluar
@@ -274,14 +274,14 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
           <div className="pt-4 flex gap-3">
             <Button 
               type="submit" 
-              className={clsx("flex-1 h-11 border-none",
+              className={clsx("flex-1",
                 modalType === 'masuk' ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
               )} 
               isLoading={isSubmitting}
             >
               Simpan Transaksi
             </Button>
-            <Button type="button" variant="outline" className="px-6" onClick={() => setIsModalOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
               Batal
             </Button>
           </div>

@@ -180,7 +180,7 @@ export const Penarikan: React.FC = () => {
 
               <div className="p-3 md:p-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-2">
                 <Button 
-                  className="w-full sm:flex-1 bg-green-600 hover:bg-green-700 font-bold text-[11px] md:text-xs gap-2 h-10"
+                  className="w-full sm:flex-1 bg-green-600 hover:bg-green-700 gap-2"
                   onClick={() => openConfirmModal(req.id)}
                   isLoading={isSubmitting}
                 >
@@ -188,7 +188,7 @@ export const Penarikan: React.FC = () => {
                 </Button>
                 <Button 
                   variant="outline"
-                  className="w-full sm:flex-1 border-red-200 text-red-700 hover:bg-red-50 font-bold text-[11px] md:text-xs gap-2 h-10"
+                  className="w-full sm:flex-1 border-red-200 text-red-700 hover:bg-red-50 gap-2"
                   onClick={() => openRejectModal(req.id, req.member?.name || 'Anggota')}
                   isLoading={isSubmitting}
                 >
@@ -371,7 +371,7 @@ export const Penarikan: React.FC = () => {
 
           <div className="pt-4 flex gap-3">
             <Button 
-              className="flex-1 bg-green-600 hover:bg-green-700 font-bold text-xs py-3"
+              className="flex-1 bg-green-600 hover:bg-green-700"
               isLoading={isSubmitting}
               disabled={!tempProofUrl}
               onClick={() => confirmingRequestId && handleProcessRequest(confirmingRequestId, 'approved', tempProofUrl || undefined)}
@@ -380,7 +380,6 @@ export const Penarikan: React.FC = () => {
             </Button>
             <Button 
               variant="outline" 
-              className="px-6 font-bold text-xs py-3"
               onClick={() => setIsConfirmModalOpen(false)}
             >
               Batal
@@ -421,7 +420,7 @@ export const Penarikan: React.FC = () => {
           </div>
 
           <Button 
-            className="w-full font-bold text-xs py-3"
+            className="w-full"
             onClick={() => setSelectedMemberId(null)}
           >
             Tutup

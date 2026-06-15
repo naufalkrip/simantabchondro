@@ -155,7 +155,7 @@ export const Setoran: React.FC = () => {
 
               <div className="p-3 md:p-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-2">
                 <Button 
-                  className="w-full sm:flex-1 bg-green-600 hover:bg-green-700 font-bold text-[11px] md:text-xs gap-2 h-10"
+                  className="w-full sm:flex-1 bg-green-600 hover:bg-green-700 gap-2"
                   onClick={() => handleProcessRequest(req.id, 'approved')}
                   isLoading={isSubmitting}
                 >
@@ -163,7 +163,7 @@ export const Setoran: React.FC = () => {
                 </Button>
                 <Button 
                   variant="outline"
-                  className="w-full sm:flex-1 border-red-200 text-red-700 hover:bg-red-50 font-bold text-[11px] md:text-xs gap-2 h-10"
+                  className="w-full sm:flex-1 border-red-200 text-red-700 hover:bg-red-50 gap-2"
                   onClick={() => handleProcessRequest(req.id, 'rejected')}
                   isLoading={isSubmitting}
                 >
@@ -291,7 +291,7 @@ export const Setoran: React.FC = () => {
               className="w-full h-auto max-h-[75vh] object-contain rounded-lg shadow-xl"
             />
             <Button 
-              className="w-full mt-6 font-bold text-xs py-3"
+              className="w-full mt-6"
               onClick={() => setSelectedProofUrl(null)}
             >
               Tutup Preview

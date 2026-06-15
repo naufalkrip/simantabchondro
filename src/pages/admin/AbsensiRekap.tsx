@@ -254,7 +254,7 @@ export const AbsensiRekap: React.FC = () => {
           isLoading={isDownloading}
           variant="outline" 
           size="sm" 
-          className="gap-2 text-xs font-bold text-red-700 border-red-200"
+          className="gap-2 text-red-700 border-red-200"
         >
           <Download size={14} /> Download PDF
         </Button>
@@ -287,7 +287,7 @@ export const AbsensiRekap: React.FC = () => {
             </select>
           </div>
           <div className="md:col-span-2 flex gap-2">
-            <Button onClick={() => handleFetchSummary(false)} isLoading={isLoading} className="font-bold text-xs py-2.5 flex-1">
+            <Button onClick={() => handleFetchSummary(false)} isLoading={isLoading} className="flex-1">
               Tampilkan Data
             </Button>
           </div>

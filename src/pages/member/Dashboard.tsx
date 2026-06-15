@@ -395,7 +395,7 @@ export const Dashboard: React.FC = () => {
             </div>
             <div className="flex gap-3">
               <Button
-                className="flex-1 font-bold text-xs py-3"
+                className="flex-1"
                 onClick={() => setSelectedProofUrl(null)}
               >
                 Tutup Preview
@@ -405,7 +405,7 @@ export const Dashboard: React.FC = () => {
                 download={`Bukti_Transfer_${new Date().getTime()}.png`}
                 className="flex-1"
               >
-                <Button variant="outline" className="w-full font-bold text-xs py-3 border-slate-200 dark:border-slate-600">
+                <Button variant="outline" className="w-full border-slate-200 dark:border-slate-600">
                   Unduh Gambar
                 </Button>
               </a>

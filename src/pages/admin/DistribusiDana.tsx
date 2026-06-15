@@ -559,7 +559,6 @@ export const DistribusiDana: React.FC = () => {
             <Button
               onClick={handleExportPDF}
               variant="outline"
-              className="h-[38px] text-xs font-bold rounded-md"
             >
               <Download size={14} className="mr-1.5" />
               Cetak PDF
@@ -568,7 +567,6 @@ export const DistribusiDana: React.FC = () => {
               onClick={handleSave}
               isLoading={isSaving}
               variant="primary"
-              className="h-[38px] text-xs font-bold rounded-md"
             >
               <Save size={14} className="mr-1.5" />
               Simpan Distribusi Dana
@@ -846,7 +844,6 @@ export const DistribusiDana: React.FC = () => {
             <Button
               onClick={() => setDeleteConfirm(null)}
               variant="outline"
-              className="h-[34px] text-xs rounded-md"
               disabled={isDeleting}
             >
               Batal
@@ -855,7 +852,6 @@ export const DistribusiDana: React.FC = () => {
               onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
               isLoading={isDeleting}
               variant="danger"
-              className="h-[34px] text-xs rounded-md"
             >
               <Trash2 size={13} className="mr-1" />
               Hapus
@@ -1059,7 +1055,6 @@ export const DistribusiDana: React.FC = () => {
               <Button
                 onClick={handleExportDetailPDF}
                 variant="outline"
-                className="h-[36px] text-xs font-bold rounded-lg px-4"
               >
                 <Download size={14} className="mr-1.5" />
                 Cetak PDF

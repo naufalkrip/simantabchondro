@@ -276,10 +276,10 @@ export const AbsensiRiwayat: React.FC = () => {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button onClick={() => setIsEditModalOpen(false)} variant="outline" className="flex-1 font-bold text-xs py-3">
+            <Button onClick={() => setIsEditModalOpen(false)} variant="outline" className="flex-1">
               Batal
             </Button>
-            <Button onClick={handleSaveEdit} isLoading={isSavingEdit} variant="primary" className="flex-1 font-bold text-xs py-3">
+            <Button onClick={handleSaveEdit} isLoading={isSavingEdit} variant="primary" className="flex-1">
               Simpan Perubahan
             </Button>
           </div>

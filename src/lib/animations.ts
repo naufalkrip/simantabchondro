@@ -31,9 +31,9 @@ export const modalBackdrop: Variants = {
 };
 
 export const modalContent: Variants = {
-  initial: { opacity: 0, scale: 0.95, y: 10 },
-  animate: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring', bounce: 0, duration: 0.4 } },
-  exit: { opacity: 0, scale: 0.95, y: 10, transition: { duration: 0.2 } }
+  initial: { opacity: 0, scale: 0.92, y: 20 },
+  animate: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring', bounce: 0.15, stiffness: 350, damping: 28 } },
+  exit: { opacity: 0, scale: 0.92, y: 20, transition: { duration: 0.18, ease: 'easeIn' } }
 };
 
 export const sidebarSlide: Variants = {

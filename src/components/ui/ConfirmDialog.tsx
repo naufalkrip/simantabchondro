@@ -26,35 +26,41 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   isLoading = false,
   variant = 'danger'
 }) => {
+  const iconColors = {
+    danger: 'bg-red-50 text-red-600',
+    warning: 'bg-yellow-50 text-yellow-600',
+    primary: 'bg-blue-50 text-blue-600',
+  };
+
+  const confirmBtnVariant = variant === 'danger' ? 'primary' : variant === 'warning' ? 'secondary' : 'primary';
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth="sm">
-      <div className="space-y-4 pt-2">
+    <Modal isOpen={isOpen} onClose={onClose} title="" maxWidth="sm">
+      <div className="space-y-6">
         <div className="flex items-start gap-4">
-          <div className={`p-3 rounded-full shrink-0 ${
-            variant === 'danger' ? 'bg-red-50 text-red-600' : 
-            variant === 'warning' ? 'bg-yellow-50 text-yellow-600' : 'bg-blue-50 text-blue-600'
-          }`}>
+          <div className={`p-3 rounded-full shrink-0 ${iconColors[variant]}`}>
             <AlertTriangle size={24} />
           </div>
-          <div>
-            <p className="text-sm text-gray-500 leading-relaxed">
+          <div className="pt-1">
+            <h4 className="text-[17px] font-bold text-gray-900 mb-1">{title}</h4>
+            <p className="text-[14px] text-slate-500 leading-relaxed">
               {message}
             </p>
           </div>
         </div>
 
-        <div className="flex gap-3 pt-2">
-          <Button 
-            variant="outline" 
-            className="flex-1 font-bold text-xs py-2.5" 
+        <div className="flex gap-3">
+          <Button
+            variant="secondary"
+            className="flex-1"
             onClick={onClose}
             disabled={isLoading}
           >
             {cancelText}
           </Button>
-          <Button 
-            variant={variant === 'danger' ? 'primary' : variant === 'warning' ? 'secondary' : 'primary'}
-            className={`flex-1 font-bold text-xs py-2.5 ${variant === 'danger' ? 'bg-red-700 hover:bg-red-800' : ''}`}
+          <Button
+            variant={confirmBtnVariant}
+            className="flex-1"
             onClick={onConfirm}
             isLoading={isLoading}
           >

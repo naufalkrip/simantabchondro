@@ -247,7 +247,7 @@ export const Pengaturan: React.FC = () => {
               <Button
                 variant="primary"
                 size="sm"
-                className="gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                className="gap-1.5"
                 onClick={() => { resetPasswordForm(); setIsPasswordModalOpen(true); }}
               >
                 <Key size={14} />
@@ -256,7 +256,7 @@ export const Pengaturan: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                className="gap-1.5 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
                 onClick={() => setIsLogoutConfirmOpen(true)}
               >
                 <LogOut size={14} />
@@ -322,7 +322,7 @@ export const Pengaturan: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                className="gap-1.5"
                 onClick={openEditBank}
               >
                 <Edit3 size={14} />
@@ -436,14 +436,14 @@ export const Pengaturan: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              className="flex-1 rounded-lg"
+              className="flex-1"
               onClick={() => { setIsPasswordModalOpen(false); resetPasswordForm(); }}
             >
               Batal
             </Button>
             <Button
               type="submit"
-              className="flex-1 rounded-lg"
+              className="flex-1"
               disabled={!passwordValidation.allValid}
               isLoading={changePasswordMutation.isPending}
             >
@@ -513,10 +513,10 @@ export const Pengaturan: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1 rounded-lg" onClick={() => setIsEditBankOpen(false)}>
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setIsEditBankOpen(false)}>
               Batal
             </Button>
-            <Button type="submit" className="flex-1 rounded-lg" isLoading={updateBankMutation.isPending}>
+            <Button type="submit" className="flex-1" isLoading={updateBankMutation.isPending}>
               Simpan
             </Button>
           </div>

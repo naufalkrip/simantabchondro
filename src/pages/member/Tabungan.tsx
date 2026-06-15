@@ -198,14 +198,14 @@ export const Tabungan: React.FC = () => {
       {/* Action Buttons Outside the Box */}
       <div className="grid grid-cols-1 md:flex md:flex-wrap gap-3">
         <Button 
-          className="w-full md:w-auto font-bold text-xs gap-2 px-6 py-2.5 shadow-md active:scale-95 transition-all"
+          className="w-full md:w-auto gap-2"
           onClick={() => setIsDepositInfoOpen(true)}
         >
           <PlusCircle size={16} /> Tambah Setoran
         </Button>
         <Button 
           variant="secondary"
-          className="w-full md:w-auto bg-white border-gray-200 font-bold text-xs gap-2 px-6 py-2.5 shadow-sm hover:bg-gray-50 active:scale-95 transition-all"
+          className="w-full md:w-auto bg-white border-gray-200 gap-2 hover:bg-gray-50"
           onClick={() => setIsWithdrawFormOpen(true)}
         >
           <ArrowDownRight size={16} /> Request Penarikan
@@ -414,7 +414,7 @@ export const Tabungan: React.FC = () => {
           </div>
 
           <Button 
-            className="w-full font-bold gap-2 py-3"
+            className="w-full gap-2"
             onClick={() => {
               setIsDepositInfoOpen(false);
               setIsDepositFormOpen(true);
@@ -479,7 +479,7 @@ export const Tabungan: React.FC = () => {
 
           <Button 
             type="submit"
-            className="w-full font-bold gap-2 py-3"
+            className="w-full gap-2"
             isLoading={isSubmitting}
           >
             <Send size={18} /> Kirim Bukti Setoran
@@ -558,7 +558,7 @@ export const Tabungan: React.FC = () => {
 
           <Button 
             type="submit"
-            className="w-full font-bold gap-2 py-4 shadow-lg shadow-red-700/20 active:scale-95 transition-all"
+            className="w-full gap-2 shadow-lg shadow-red-700/20"
             isLoading={isSubmitting}
           >
             <Send size={18} /> Konfirmasi & Kirim Request
@@ -593,7 +593,7 @@ export const Tabungan: React.FC = () => {
             </div>
             <div className="flex gap-3">
               <Button 
-                className="flex-1 font-bold text-xs py-3"
+                className="flex-1"
                 onClick={() => setSelectedProofUrl(null)}
               >
                 Tutup Preview
@@ -603,7 +603,7 @@ export const Tabungan: React.FC = () => {
                 download={`Bukti_Transfer_${new Date().getTime()}.png`}
                 className="flex-1"
               >
-                <Button variant="outline" className="w-full font-bold text-xs py-3 border-gray-200">
+                <Button variant="outline" className="w-full border-gray-200">
                   Unduh Gambar
                 </Button>
               </a>

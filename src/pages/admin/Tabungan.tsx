@@ -323,7 +323,7 @@ export const Tabungan: React.FC = () => {
           {/* Action Buttons */}
           <div className="grid grid-cols-1 md:flex md:flex-wrap gap-3">
             <Button 
-              className="w-full md:w-auto font-bold text-xs gap-2 px-6 py-2.5 shadow-md active:scale-95 transition-all"
+              className="w-full md:w-auto gap-2"
               onClick={() => {
                 setEditingId(null);
                 setFormData(prev => ({ ...prev, type: 'setoran', memberId: '', nominal: '', note: '' }));
@@ -333,7 +333,7 @@ export const Tabungan: React.FC = () => {
               <PlusCircle size={16} /> Uang Masuk
             </Button>
             <Button 
-              className="w-full md:w-auto font-bold text-xs gap-2 px-6 py-2.5 shadow-md active:scale-95 transition-all"
+              className="w-full md:w-auto gap-2"
               onClick={() => {
                 setEditingId(null);
                 setFormData(prev => ({ ...prev, type: 'penarikan', memberId: '', nominal: '', note: '' }));
@@ -638,13 +638,13 @@ export const Tabungan: React.FC = () => {
           <div className="pt-4 flex gap-3">
             <Button 
               type="submit" 
-              className="flex-1 font-bold text-xs" 
+              className="flex-1"
               isLoading={isSubmitting}
               disabled={!formData.memberId || !formData.nominal}
             >
               Simpan {editingId ? 'Perubahan' : 'Transaksi'}
             </Button>
-            <Button type="button" variant="outline" className="px-6 font-bold text-xs" onClick={() => setIsInputModalOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setIsInputModalOpen(false)}>
               Batal
             </Button>
           </div>
@@ -682,7 +682,7 @@ export const Tabungan: React.FC = () => {
             <Button 
               onClick={downloadMemberSavingsPDF}
               size="sm" 
-              className="w-full md:w-auto font-bold text-xs gap-2 shrink-0"
+              className="w-full md:w-auto gap-2 shrink-0"
             >
               <FileText size={14} /> Download PDF
             </Button>
@@ -763,7 +763,7 @@ export const Tabungan: React.FC = () => {
           </div>
 
           <Button 
-            className="w-full mt-4 text-xs font-bold" 
+            className="w-full mt-4"
             variant="outline" 
             onClick={() => setSelectedMemberId(null)}
           >
@@ -803,7 +803,7 @@ export const Tabungan: React.FC = () => {
             <Button 
               onClick={downloadHistoryPDF}
               size="sm" 
-              className="w-full md:w-auto font-bold text-xs gap-2"
+              className="w-full md:w-auto gap-2"
             >
               <FileText size={14} /> Download PDF
             </Button>

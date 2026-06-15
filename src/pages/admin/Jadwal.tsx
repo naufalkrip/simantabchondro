@@ -417,10 +417,10 @@ export const Jadwal: React.FC = () => {
           </div>
 
           <div className="pt-4 flex gap-3">
-            <Button type="submit" className="flex-1 h-11" isLoading={isSubmitting}>
+            <Button type="submit" className="flex-1" isLoading={isSubmitting}>
               {editingId ? 'Simpan Perubahan' : 'Tambah ke Jadwal'}
             </Button>
-            <Button type="button" variant="outline" className="px-6" onClick={() => setIsModalOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
               Batal
             </Button>
           </div>

@@ -193,10 +193,10 @@ export const Anggota: React.FC = () => {
           <p className="text-[10px] md:text-xs text-gray-500 mt-0.5">Kelola dan organisir anggota berdasarkan divisi</p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
-          <Button onClick={handleDownloadPDF} variant="outline" size="sm" className="flex-1 md:flex-none text-[11px] md:text-xs font-semibold px-3 py-1.5 border-gray-200 rounded-md h-9">
+          <Button onClick={handleDownloadPDF} variant="outline" size="sm" className="flex-1 md:flex-none border-gray-200">
             Download PDF
           </Button>
-          <Button onClick={() => { resetForm(); setIsModalOpen(true); }} variant="primary" size="sm" className="flex-1 md:flex-none gap-1.5 text-[11px] md:text-xs font-bold px-4 py-1.5 rounded-md h-9">
+          <Button onClick={() => { resetForm(); setIsModalOpen(true); }} variant="primary" size="sm" className="flex-1 md:flex-none gap-1.5">
             <UserPlus size={14} /> Tambah
           </Button>
         </div>
@@ -318,10 +318,10 @@ export const Anggota: React.FC = () => {
           </div>
 
           <div className="pt-4 flex gap-3">
-            <Button type="submit" className="flex-1 h-10 text-sm font-bold  rounded-md" disabled={isSubmitting}>
+            <Button type="submit" className="flex-1" disabled={isSubmitting}>
               {isSubmitting ? 'Proses...' : editingId ? 'Simpan' : 'Daftar'}
             </Button>
-            <Button type="button" variant="outline" className="px-4 text-sm font-bold  rounded-md" onClick={() => setIsModalOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
               Batal
             </Button>
           </div>
@@ -428,7 +428,7 @@ export const Anggota: React.FC = () => {
                 <UserPlus size={24} />
               </div>
               <p className="text-gray-500 font-bold text-sm">Belum ada data anggota</p>
-              <Button onClick={() => { resetForm(); setIsModalOpen(true); }} variant="outline" size="sm" className="mt-4 text-sm font-bold uppercase rounded-md">
+              <Button onClick={() => { resetForm(); setIsModalOpen(true); }} variant="outline" size="sm" className="mt-4 uppercase">
                 Tambah Anggota
               </Button>
             </div>

@@ -166,7 +166,7 @@ export const Pengaturan: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                className="gap-1.5"
                 onClick={() => { resetPasswordForm(); setIsEditPasswordOpen(true); }}
               >
                 <KeyRound size={14} />
@@ -212,7 +212,7 @@ export const Pengaturan: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+                className="gap-1.5"
                 onClick={() => setIsEditBankOpen(true)}
               >
                 <Edit3 size={14} />
@@ -353,14 +353,14 @@ export const Pengaturan: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              className="flex-1 rounded-xl"
+              className="flex-1"
               onClick={() => { setIsEditPasswordOpen(false); resetPasswordForm(); }}
             >
               Batal
             </Button>
             <Button
               type="submit"
-              className="flex-1 rounded-xl"
+              className="flex-1"
               isLoading={isSaving}
             >
               Simpan Password
@@ -426,14 +426,14 @@ export const Pengaturan: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              className="flex-1 rounded-xl"
+              className="flex-1"
               onClick={() => setIsEditBankOpen(false)}
             >
               Batal
             </Button>
             <Button
               type="submit"
-              className="flex-1 rounded-xl"
+              className="flex-1"
               isLoading={isSaving}
             >
               Simpan
