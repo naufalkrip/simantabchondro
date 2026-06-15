@@ -33,7 +33,6 @@ export const Dashboard: React.FC = () => {
     <div className="space-y-6">
       {/* Hero Section */}
       <HeroSection
-        username="admin"
         chartData={chartData}
         chartLoading={chartLoading}
       />

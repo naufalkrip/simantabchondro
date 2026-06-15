@@ -3,14 +3,12 @@ import { motion } from 'framer-motion';
 import {
   CalendarCheck, Wallet, TrendingUp, Calendar,
   CheckCircle2, Clock, XCircle, Image as ImageIcon, Activity,
-  UserCircle
 } from 'lucide-react';
 import clsx from 'clsx';
 import { staggerContainer, staggerItem, heroVariants } from '../../lib/animations';
 import { useMemberDashboardData } from '../../hooks/useMemberDashboardData';
 import { StatCard } from '../../components/dashboard/StatCard';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import {
@@ -88,21 +86,6 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-const getTimeAgo = (dateStr: string): string => {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMins < 1) return 'Baru saja';
-  if (diffMins < 60) return `${diffMins} menit lalu`;
-  if (diffHours < 24) return `${diffHours} jam lalu`;
-  if (diffDays < 7) return `${diffDays} hari lalu`;
-  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-};
-
 export const Dashboard: React.FC = () => {
   const {
     member,
@@ -113,7 +96,6 @@ export const Dashboard: React.FC = () => {
     attendanceStats,
     performancesCount,
     totalBalance,
-    activities,
   } = useMemberDashboardData();
 
   const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);

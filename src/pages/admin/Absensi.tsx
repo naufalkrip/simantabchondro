@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { getMembers } from '../../services/memberService';
 import { getAttendanceByDateAndLocation, saveAttendance } from '../../services/attendanceService';
-import { subscribeToDataChange } from '../../services/refreshService';
 import type { Member } from '../../types/member';
 import { ArrowUpDown, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';

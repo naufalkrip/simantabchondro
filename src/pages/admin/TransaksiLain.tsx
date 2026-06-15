@@ -16,6 +16,7 @@ import { PlusCircle, MinusCircle, Pencil, Trash2, History, Calendar, Plus, Downl
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import jsPDF from 'jspdf';
+import autoTable, { CellHookData } from 'jspdf-autotable';
 
 interface RowInput {
   id: string;
@@ -347,7 +348,7 @@ export const TransaksiLain: React.FC = () => {
       data.push(['', '', '', 'TOTAL PENGELUARAN', `Rp ${totalKeluar.toLocaleString('id-ID')}`]);
       data.push(['', '', '', 'SALDO', `Rp ${(totalMasuk - totalKeluar).toLocaleString('id-ID')}`]);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: y,
         head: [columns],
         body: data,
@@ -376,7 +377,7 @@ export const TransaksiLain: React.FC = () => {
           3: { cellWidth: 80 },
           4: { cellWidth: 90, halign: 'right' },
         },
-        didParseCell: (hookData) => {
+        didParseCell: (hookData: CellHookData) => {
           const isTotal = hookData.row.index >= txs.length;
           if (isTotal && hookData.section === 'body') {
             hookData.cell.styles.fillColor = [245, 245, 245];
