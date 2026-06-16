@@ -100,6 +100,7 @@ export const Penarikan: React.FC = () => {
       success: (res) => {
         if (res) {
           setIsConfirmModalOpen(false);
+          fetchData();
           return `Penarikan berhasil ${status === 'approved' ? 'disetujui' : 'ditolak'}`;
         }
         throw new Error('Gagal memproses');

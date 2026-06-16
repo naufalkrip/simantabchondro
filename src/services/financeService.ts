@@ -26,19 +26,34 @@ export interface FinanceReportWithTotals extends FinanceReport {
 }
 
 export const getFinanceData = async (category: 'pengurus' | 'media'): Promise<FinanceTransaction[]> => {
-  const { data, error } = await supabase
-    .from('finance')
-    .select('*')
-    .eq('category', category)
-    .is('report_id', null)
-    .order('date', { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from('finance')
+      .select('*')
+      .eq('category', category)
+      .is('report_id', null)
+      .order('date', { ascending: true });
 
-  if (error) {
+    if (error) {
+      // report_id column might not exist (migration not run)
+      if (error.message?.includes('report_id') || error.code === '42703') {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('finance')
+          .select('*')
+          .eq('category', category)
+          .order('date', { ascending: true });
+
+        if (fallbackError) throw fallbackError;
+        return fallbackData || [];
+      }
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
     console.error('Error fetching finance data:', error);
     return [];
   }
-
-  return data || [];
 };
 
 export const saveFinanceTransaction = async (transaction: Omit<FinanceTransaction, 'id'>): Promise<boolean> => {

@@ -173,6 +173,7 @@ export const DistribusiSection: React.FC<DistribusiSectionProps> = ({ date, loca
         setDescription('');
         setRecipients([]);
         setNominalPerAnggota(0);
+        fetchHistory();
         return 'Distribusi dana berhasil disimpan';
       },
       error: (err) => `Gagal: ${err.message || 'Terjadi kesalahan sistem'}`

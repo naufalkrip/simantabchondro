@@ -191,7 +191,10 @@ export const Tabungan: React.FC = () => {
 
     toast.promise(promise, {
       loading: 'Menghapus transaksi...',
-      success: () => 'Transaksi berhasil dihapus',
+      success: () => {
+        fetchData();
+        return 'Transaksi berhasil dihapus';
+      },
       error: 'Gagal menghapus transaksi'
     });
   };
@@ -243,6 +246,7 @@ export const Tabungan: React.FC = () => {
           setIsInputModalOpen(false);
           setEditingId(null);
           setFormData({ type: 'setoran', memberId: '', nominal: '', note: '' });
+          fetchData();
           return editingId ? 'Transaksi berhasil diperbarui' : 'Transaksi berhasil disimpan';
         }
         throw new Error('Gagal menyimpan');

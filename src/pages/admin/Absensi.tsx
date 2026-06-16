@@ -5,6 +5,7 @@ import { getAttendanceByDateAndLocation, saveAttendance } from '../../services/a
 import type { Member } from '../../types/member';
 import { ArrowUpDown, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { subscribeToDataChange } from '../../services/refreshService';
 
 export const Absensi: React.FC = () => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -54,6 +55,10 @@ export const Absensi: React.FC = () => {
     if (location) {
       fetchData(location);
     }
+    const unsub = subscribeToDataChange(() => {
+      if (location) fetchData(location);
+    });
+    return () => unsub();
   }, [location]);
 
   const handleStatusChange = (memberId: string, status: 'hadir' | 'izin' | 'bolos' | 'tampil') => {
@@ -84,6 +89,7 @@ export const Absensi: React.FC = () => {
       loading: 'Menyimpan data absensi...',
       success: (res) => {
         if (res) {
+          fetchData(location);
           return 'Data absensi berhasil disimpan';
         }
         throw new Error('Gagal menyimpan');

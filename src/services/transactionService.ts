@@ -4,14 +4,23 @@ import { updateMember } from './memberService';
 import { notifyDataChange } from './refreshService';
 
 export const getTransactions = async (): Promise<Transaction[]> => {
-  const { data, error } = await supabase.rpc('get_transactions');
+  try {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id, member_id, type, amount, date, status, note, created_at, member:members(name)')
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching transactions via RPC:', error);
+    if (error) {
+      console.error('Error fetching transactions:', error);
+      return [];
+    }
+
+    return (data || []) as unknown as Transaction[];
+  } catch (error) {
+    console.error('Error in getTransactions:', error);
     return [];
   }
-
-  return data || [];
 };
 
 interface FilterOptions {
@@ -28,7 +37,7 @@ export const getTransactionsFiltered = async (options: FilterOptions = {}): Prom
   try {
     let query = supabase
       .from('transactions')
-      .select('*, member:members(name)')
+      .select('id, member_id, type, amount, date, status, note, created_at, proof_url, member:members(name)')
       .order('date', { ascending: false })
       .order('created_at', { ascending: false });
 

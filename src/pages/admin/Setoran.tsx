@@ -80,6 +80,7 @@ export const Setoran: React.FC = () => {
       loading: status === 'approved' ? 'Menyetujui setoran...' : 'Menolak setoran...',
       success: (res) => {
         if (res) {
+          fetchData();
           return `Setoran berhasil ${status === 'approved' ? 'disetujui' : 'ditolak'}`;
         }
         throw new Error('Gagal memproses');
