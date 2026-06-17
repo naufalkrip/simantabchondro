@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS public.settings CASCADE;
 DROP TABLE IF EXISTS public.media_inventory CASCADE;
 DROP TABLE IF EXISTS public.media_accounts CASCADE;
 DROP TABLE IF EXISTS public.schedules CASCADE;
+DROP TABLE IF EXISTS public.finance_reports CASCADE;
 DROP TABLE IF EXISTS public.finance CASCADE;
 DROP TABLE IF EXISTS public.attendance CASCADE;
 DROP TABLE IF EXISTS public.transactions CASCADE;
@@ -73,7 +74,16 @@ CREATE TABLE public.attendance (
   UNIQUE(member_id, date)
 );
 
--- 3e. finance
+-- 3e. finance_reports (harus dibuat sebelum finance karena direferensi)
+CREATE TABLE IF NOT EXISTS public.finance_reports (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title       text NOT NULL,
+  date        date NOT NULL DEFAULT CURRENT_DATE,
+  description text NOT NULL DEFAULT '',
+  created_at  timestamptz DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 3f. finance
 CREATE TABLE public.finance (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   type text NOT NULL CHECK (type IN ('masuk', 'keluar')),
@@ -81,6 +91,7 @@ CREATE TABLE public.finance (
   description text NOT NULL DEFAULT '',
   date date NOT NULL DEFAULT CURRENT_DATE,
   category text NOT NULL CHECK (category IN ('pengurus', 'media')),
+  report_id uuid REFERENCES public.finance_reports(id) ON DELETE CASCADE,
   created_at timestamptz DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -134,6 +145,7 @@ ALTER TABLE public.admin ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.finance_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.finance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.media_accounts ENABLE ROW LEVEL SECURITY;
@@ -160,6 +172,10 @@ CREATE POLICY "Allow read on attendance" ON public.attendance FOR SELECT USING (
 -- schedules (all via RPC)
 DROP POLICY IF EXISTS "Allow all on schedules" ON public.schedules;
 CREATE POLICY "Allow all on schedules" ON public.schedules FOR ALL USING (true);
+
+-- finance_reports (direct CRUD)
+DROP POLICY IF EXISTS "Allow all on finance_reports" ON public.finance_reports;
+CREATE POLICY "Allow all on finance_reports" ON public.finance_reports FOR ALL USING (true);
 
 -- finance (direct CRUD)
 DROP POLICY IF EXISTS "Allow all on finance" ON public.finance;

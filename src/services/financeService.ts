@@ -73,21 +73,18 @@ export const saveFinanceTransaction = async (transaction: Omit<FinanceTransactio
 
 // --- Report functions ---
 
-export const createFinanceReport = async (report: { title: string; date: string; description?: string }): Promise<string | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('finance_reports')
-      .insert([{ title: report.title, date: report.date, description: report.description || '' }])
-      .select('id')
-      .single();
+export const createFinanceReport = async (report: { title: string; date: string; description?: string }): Promise<string> => {
+  const { data, error } = await supabase
+    .from('finance_reports')
+    .insert({ title: report.title, date: report.date, description: report.description || '' })
+    .select('id')
+    .single();
 
-    if (error) throw error;
-    notifyDataChange();
-    return data?.id || null;
-  } catch (error) {
-    console.error('Create Report Error:', error);
-    return null;
-  }
+  if (error) throw error;
+  if (!data) throw new Error('Tidak ada data yang dikembalikan');
+
+  notifyDataChange();
+  return data.id;
 };
 
 export const getFinanceReports = async (): Promise<FinanceReportWithTotals[]> => {

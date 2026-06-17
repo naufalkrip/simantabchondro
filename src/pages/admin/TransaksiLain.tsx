@@ -114,12 +114,12 @@ export const TransaksiLain: React.FC = () => {
       return;
     }
     setIsCreating(true);
-    const id = await createFinanceReport({
-      title: newReportTitle.trim(),
-      date: newReportDate,
-      description: newReportDesc.trim(),
-    });
-    if (id) {
+    try {
+      const id = await createFinanceReport({
+        title: newReportTitle.trim(),
+        date: newReportDate,
+        description: newReportDesc.trim(),
+      });
       toast.success('Laporan berhasil dibuat');
       setIsCreateModalOpen(false);
       setNewReportTitle('');
@@ -127,10 +127,12 @@ export const TransaksiLain: React.FC = () => {
       setNewReportDate(new Date().toISOString().split('T')[0]);
       await fetchReports();
       loadReport(id);
-    } else {
-      toast.error('Gagal membuat laporan');
+    } catch (error: any) {
+      toast.error('Gagal membuat laporan: ' + (error?.message || 'Terjadi kesalahan'));
+      console.error('Create Report Error:', error);
+    } finally {
+      setIsCreating(false);
     }
-    setIsCreating(false);
   };
 
   // --- Batch input ---
