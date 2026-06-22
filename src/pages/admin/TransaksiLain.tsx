@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import jsPDF from 'jspdf';
 import autoTable, { CellHookData } from 'jspdf-autotable';
+import logoUrl from '../../assets/logo.png';
 
 interface RowInput {
   id: string;
@@ -292,33 +293,64 @@ export const TransaksiLain: React.FC = () => {
   };
 
   // --- Download PDF ---
-  const downloadReportPDF = (report: FinanceReportWithTotals, txs: FinanceTransaction[]) => {
+  const downloadReportPDF = async (report: FinanceReportWithTotals, txs: FinanceTransaction[]) => {
     const doc = new jsPDF({ unit: 'px', format: 'a4' });
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageSize = doc.internal.pageSize;
+    const pageWidth = pageSize.width ? pageSize.width : pageSize.getWidth();
+    const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
     const margin = 28;
+
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = logoUrl;
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = reject;
+    });
+
+    const logoHeight = 28;
+    const logoWidth = logoHeight * (img.naturalWidth / img.naturalHeight);
+    doc.addImage(img, 'PNG', margin, 24, logoWidth, logoHeight);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
     doc.setTextColor(139, 0, 0);
-    doc.text('LAPORAN KEGIATAN', pageWidth / 2, 40, { align: 'center' });
+    doc.text('SIMANTAB', margin + logoWidth + 10, 36);
 
     doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Sistem Manajemen Informasi Anggota MB Chondro', margin + logoWidth + 10, 48);
+
+    const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    doc.setFontSize(7);
+    doc.setTextColor(120, 120, 120);
+    const dateText = `Tanggal dibuat: ${today}`;
+    doc.text(dateText, pageWidth - margin - doc.getTextWidth(dateText), 36);
+
+    const lineY = 24 + logoHeight + 12;
+    doc.setDrawColor(230, 230, 230);
+    doc.setLineWidth(1);
+    doc.line(margin, lineY, pageWidth - margin, lineY);
+
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    doc.setTextColor(60, 60, 60);
-    doc.text(report.title.toUpperCase(), pageWidth / 2, 54, { align: 'center' });
+    doc.setTextColor(40, 40, 40);
+    doc.text('LAPORAN KEGIATAN', margin, lineY + 20);
 
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.5);
-    doc.line(margin, 62, pageWidth - margin, 62);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    doc.text(report.title, margin, lineY + 32);
 
-    let y = 78;
+    let y = lineY + 42;
 
     if (report.description) {
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
       doc.text(report.description, margin, y);
-      y += 16;
+      y += 14;
     }
 
     doc.setFont('helvetica', 'bold');
@@ -331,7 +363,7 @@ export const TransaksiLain: React.FC = () => {
     doc.text(`Tanggal Laporan: ${formatDate(report.date)}`, margin, y);
     y += 12;
     doc.text(`Total Transaksi: ${txs.length}`, margin, y);
-    y += 20;
+    y += 18;
 
     if (txs.length > 0) {
       const columns = ['No', 'Deskripsi', 'Tanggal', 'Jenis', 'Nominal'];
@@ -386,17 +418,27 @@ export const TransaksiLain: React.FC = () => {
             hookData.cell.styles.fontStyle = 'bold';
           }
         },
+        didDrawPage: () => {
+          const fy = pageHeight - 24;
+          doc.setDrawColor(240, 240, 240);
+          doc.setLineWidth(0.5);
+          doc.line(margin, fy - 6, pageWidth - margin, fy - 6);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(150, 150, 150);
+          doc.text('SIMANTAB | Sistem Manajemen Informasi Anggota MB Chondro', margin, fy);
+        },
       });
     }
 
-    const footerY = doc.internal.pageSize.getHeight() - 24;
+    const fy = pageHeight - 24;
     doc.setDrawColor(240, 240, 240);
     doc.setLineWidth(0.5);
-    doc.line(margin, footerY - 6, pageWidth - margin, footerY - 6);
+    doc.line(margin, fy - 6, pageWidth - margin, fy - 6);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
-    doc.text('SIMANTAB | Sistem Manajemen Informasi Anggota MB Chondro', margin, footerY);
+    doc.text('SIMANTAB | Sistem Manajemen Informasi Anggota MB Chondro', margin, fy);
 
     const safeName = report.title.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30);
     doc.save(`laporan_${safeName}_${report.date}.pdf`);
@@ -787,6 +829,13 @@ export const TransaksiLain: React.FC = () => {
                           >
                             <Download size={14} />
                           </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteReport(r); }}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Hapus Laporan"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -820,6 +869,9 @@ export const TransaksiLain: React.FC = () => {
                       </button>
                       <button onClick={() => downloadReportPDF({ ...r, description: r.description || '' }, [])} className="p-2 bg-green-50 text-green-600 rounded-lg">
                         <Download size={14} />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteReport(r); }} className="p-2 bg-red-50 text-red-600 rounded-lg">
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
