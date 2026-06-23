@@ -1,73 +1,110 @@
-# React + TypeScript + Vite
+# SIMANTAB
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Si**stem **I**nformasi **M**anajemen **T**abungan dan **A**bsensi **B**erbasis Web
 
-Currently, two official plugins are available:
+Aplikasi manajemen keuangan dan absensi untuk kelompok/komunitas, dibangun dengan React + TypeScript + Vite.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Fitur
 
-## React Compiler
+### Admin
+- **Dashboard** — ringkasan data keuangan dan anggota
+- **Anggota** — manajemen data anggota
+- **Absensi** — pencatatan kehadiran, riwayat, dan rekap
+- **Tabungan** — kelola setoran dan penarikan tabungan anggota
+- **Keuangan Chondro** — manajemen keuangan kas
+- **Distribusi Dana** — distribusi dana ke anggota
+- **Transaksi Lainnya** — transaksi di luar tabungan rutin
+- **Manajemen Media** — upload dan kelola media
+- **Jadwal** — atur jadwal kegiatan
+- **Pengaturan** — konfigurasi aplikasi
+- **Laporan PDF** — cetak laporan kegiatan
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Member
+- **Dashboard** — ringkasan pribadi
+- **Absensi** — lihat riwayat kehadiran
+- **Tabungan** — lihat saldo dan riwayat tabungan
+- **Jadwal** — lihat jadwal kegiatan
+- **Pengaturan** — ubah profil dan kata sandi
 
-## Expanding the ESLint configuration
+## Teknologi
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+| Stack | Keterangan |
+|-------|-----------|
+| **Frontend** | React 19, TypeScript 6, Vite 8 |
+| **Styling** | Tailwind CSS 4 |
+| **Backend** | Supabase (PostgreSQL + Auth + Realtime) |
+| **State/Data** | TanStack React Query |
+| **Routing** | React Router v7 |
+| **Charts** | Recharts |
+| **PDF** | jsPDF + jsPDF-AutoTable |
+| **Animasi** | Framer Motion |
+| **UI** | Lucide React (icons), Sonner (toast) |
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Panduan Memulai
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Prasyarat
+- Node.js 20+
+- npm
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Instalasi
+
+```bash
+# Clone repositori
+git clone https://github.com/naufalkrip/simantabchondro.git
+cd simantab
+
+# Install dependencies
+npm install
+
+# Salin file environment
+cp .env.example .env
+# Isi .env dengan kredensial Supabase Anda
+
+# Jalankan development server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Build & Deploy
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Build production
+npm run build
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Preview build
+npm run preview
+```
+
+### Lint
+
+```bash
+npm run lint
+```
+
+## Environment Variables
+
+Buat file `.env` di root proyek:
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+## Struktur Proyek
+
+```
+src/
+├── components/    # Komponen UI reusable
+├── context/       # React context (Auth, Theme)
+├── hooks/         # Custom hooks
+├── layouts/       # Layout admin & member
+├── lib/           # Konfigurasi library (queryClient)
+├── pages/
+│   ├── admin/     # Halaman portal admin
+│   └── member/    # Halaman portal member
+├── routes/        # Protected route wrapper
+├── services/      # Supabase API service layer
+├── store/         # Zustand store (jika ada)
+├── styles/        # Global CSS
+├── types/         # TypeScript type definitions
+└── utils/         # Utility functions (PDF export, dll)
 ```
