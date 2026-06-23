@@ -49,7 +49,8 @@ export const Absensi: React.FC = () => {
     } else {
       fetchData('');
     }
-  }, [date]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, location]);
 
   useEffect(() => {
     if (location) {
@@ -59,6 +60,7 @@ export const Absensi: React.FC = () => {
       if (location) fetchData(location);
     });
     return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location]);
 
   const handleStatusChange = (memberId: string, status: 'hadir' | 'izin' | 'bolos' | 'tampil') => {
@@ -212,7 +214,7 @@ export const Absensi: React.FC = () => {
                           'bg-red-50 text-red-700 border-red-200 focus:ring-red-500/20 focus:border-red-500'
                         }`}
                         value={attendance[member.id] || 'hadir'}
-                        onChange={(e) => handleStatusChange(member.id, e.target.value as any)}
+                        onChange={(e) => handleStatusChange(member.id, e.target.value as 'hadir' | 'tampil' | 'izin' | 'bolos')}
                       >
                         <option value="hadir">Hadir</option>
                         <option value="tampil">Tampil</option>
@@ -257,7 +259,7 @@ export const Absensi: React.FC = () => {
                     'bg-red-50 text-red-700 border-red-200'
                   }`}
                   value={attendance[member.id] || 'hadir'}
-                  onChange={(e) => handleStatusChange(member.id, e.target.value as any)}
+                  onChange={(e) => handleStatusChange(member.id, e.target.value as 'hadir' | 'tampil' | 'izin' | 'bolos')}
                 >
                   <option value="hadir">Hadir</option>
                   <option value="tampil">Tampil</option>

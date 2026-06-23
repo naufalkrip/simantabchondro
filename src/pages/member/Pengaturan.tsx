@@ -48,6 +48,7 @@ export const Pengaturan: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberId]);
 
   const formatAccountNumber = (num: string) => {

@@ -10,10 +10,10 @@ interface ExportPDFOptions {
   title: string;
   filename: string;
   columns: string[];
-  data: any[][];
+  data: (string | number)[][];
   orientation?: 'portrait' | 'landscape';
   columnStyles?: UserOptions['columnStyles'];
-  foot?: any[][];
+  foot?: (string | number)[][];
   subtitle?: string;
 }
 

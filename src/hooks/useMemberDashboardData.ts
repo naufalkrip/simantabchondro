@@ -21,7 +21,7 @@ interface Activity {
 }
 
 export const useMemberDashboardData = () => {
-  const memberId = sessionStorage.getItem('member_id') || '';
+  const memberId = useMemo(() => sessionStorage.getItem('member_id') || '', []);
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
@@ -118,6 +118,7 @@ export const useMemberDashboardData = () => {
       days.push({ day: dayName, status: hadir > 0 ? 'hadir' : izin > 0 ? 'izin' : bolos > 0 ? 'bolos' : 'none', label: dateLabel });
     }
     return days;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attendance7Days, memberId]);
 
   // Recent activities

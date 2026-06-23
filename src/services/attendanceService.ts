@@ -39,7 +39,7 @@ export const saveAttendance = async (attendanceRecords: Omit<Attendance, 'id'>[]
 
     notifyDataChange();
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error saving attendance:', error);
     throw error;
   }

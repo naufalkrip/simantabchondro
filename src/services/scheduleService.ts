@@ -23,7 +23,7 @@ export const getSchedules = async (): Promise<Schedule[]> => {
   const now = new Date();
   const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   
-  return (data || []).filter((s: any) => {
+  return (data as Schedule[] || []).filter((s: Schedule) => {
     const scheduleDate = new Date(s.date);
     return scheduleDate >= startOfCurrentMonth;
   });

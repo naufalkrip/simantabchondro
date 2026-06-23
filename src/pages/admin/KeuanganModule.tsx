@@ -51,6 +51,7 @@ export const KeuanganModule: React.FC<KeuanganModuleProps> = ({ category, title 
     });
 
     return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category]);
 
   const totalBalance = transactions.reduce((sum, t) => {

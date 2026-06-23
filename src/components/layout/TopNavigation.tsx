@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Menu, Bell, Sun, Moon, Search, LogOut, User, Settings, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../hooks/useTheme';
 import { dropdownVariants } from '../../lib/animations';
 import { useNavigate } from 'react-router-dom';
 

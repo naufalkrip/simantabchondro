@@ -26,7 +26,7 @@ export const MediaAccountsSection: React.FC = () => {
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data: any) => editingId ? updateMediaAccount(editingId, data) : addMediaAccount(data),
+    mutationFn: (data: Omit<MediaAccount, 'id' | 'last_updated' | 'created_at'>) => editingId ? updateMediaAccount(editingId, data) : addMediaAccount(data),
     onSuccess: (res) => {
       if (res.success) {
         queryClient.invalidateQueries({ queryKey: ['media_accounts'] });

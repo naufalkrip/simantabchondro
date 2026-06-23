@@ -6,6 +6,7 @@ import { getMembers } from '../../services/memberService';
 import { getAttendanceByDateRange } from '../../services/attendanceService';
 import { subscribeToDataChange } from '../../services/refreshService';
 import type { Member } from '../../types/member';
+import type { Attendance } from '../../types/attendance';
 import { Calendar as CalendarIcon, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
@@ -14,7 +15,7 @@ import logoUrl from '../../assets/logo.png';
 
 export const AbsensiRekap: React.FC = () => {
   const [members, setMembers] = useState<Member[]>([]);
-  const [summaryData, setSummaryData] = useState<any[]>([]);
+  const [summaryData, setSummaryData] = useState<Attendance[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [filterMonth, setFilterMonth] = useState<string>(
@@ -40,15 +41,6 @@ export const AbsensiRekap: React.FC = () => {
     setMembers(fetchedMembers);
   };
 
-  useEffect(() => {
-    loadInitialData();
-    const unsubscribe = subscribeToDataChange(() => {
-      loadInitialData();
-      handleFetchSummary(true);
-    });
-    return () => unsubscribe();
-  }, [filterMonth, filterYear]);
-
   const getDateRangeFromMonth = () => {
     const start = `${filterYear}-${filterMonth}-01`;
     const lastDay = new Date(Number(filterYear), Number(filterMonth), 0).getDate();
@@ -69,12 +61,22 @@ export const AbsensiRekap: React.FC = () => {
           toast.success(`Ditemukan ${data.length} rekaman absensi.`);
         }
       }
-    } catch (err) {
+    } catch {
       if (!silent) toast.error('Gagal mengambil data.');
     } finally {
       if (!silent) setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadInitialData();
+    const unsubscribe = subscribeToDataChange(() => {
+      loadInitialData();
+      handleFetchSummary(true);
+    });
+    return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterMonth, filterYear]);
 
   const handleDownloadReport = async () => {
     const { start, end } = getDateRangeFromMonth();
@@ -173,7 +175,7 @@ export const AbsensiRekap: React.FC = () => {
         return row;
       });
 
-      const drawFooter = (hookData: any) => {
+      const drawFooter = (hookData: { pageNumber: number }) => {
         const str = 'SIMANTAB | Sistem Manajemen Informasi Anggota MB Chondro';
         const pageStr = `Halaman ${hookData.pageNumber}`;
         doc.setFont("helvetica", "normal");
@@ -200,7 +202,7 @@ export const AbsensiRekap: React.FC = () => {
         didDrawPage: drawFooter
       });
 
-      const table1End = (doc as any).lastAutoTable.finalY;
+      const table1End = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
       const remainingSpace = pageHeight - margin.bottom - table1End;
       if (remainingSpace < 80) doc.addPage();
 

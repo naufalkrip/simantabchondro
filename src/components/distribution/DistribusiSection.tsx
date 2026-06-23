@@ -254,8 +254,8 @@ export const DistribusiSection: React.FC<DistribusiSectionProps> = ({ date, loca
       toast.success('Distribusi dana berhasil dihapus');
       setDeleteConfirm(null);
       fetchHistory();
-    } catch (err: any) {
-      toast.error(`Gagal menghapus: ${err.message || 'Terjadi kesalahan'}`);
+    } catch (err: unknown) {
+      toast.error(`Gagal menghapus: ${err instanceof Error ? err.message : 'Terjadi kesalahan'}`);
     } finally {
       setIsDeleting(false);
     }

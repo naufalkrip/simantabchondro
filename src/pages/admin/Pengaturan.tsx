@@ -11,7 +11,7 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { staggerContainer, staggerItem } from '../../lib/animations';
-import { getSetting, updateSetting, changeAdminPassword, invalidateAdminSessions } from '../../services/settingsService';
+import { getSetting, updateSetting, changeAdminPassword, invalidateAdminSessions, type BankInfo } from '../../services/settingsService';
 
 const BANK_OPTIONS = ['BCA', 'BRI', 'BNI', 'Mandiri', 'BSI', 'CIMB Niaga', 'Dana', 'OVO', 'Gopay', 'ShopeePay'];
 
@@ -41,9 +41,9 @@ export const Pengaturan: React.FC = () => {
   const adminUsername = sessionStorage.getItem('admin_username') || 'admin';
 
   // Bank info query
-  const { data: bankInfo, isLoading: isLoadingBank } = useQuery({
+  const { data: bankInfo, isLoading: isLoadingBank } = useQuery<BankInfo | null>({
     queryKey: ['settings', 'bank_info'],
-    queryFn: () => getSetting('bank_info').then(res => res || {
+    queryFn: () => getSetting<BankInfo>('bank_info').then(res => res || {
       bankName: 'BCA',
       accountNumber: '1234567890',
       accountHolder: 'ADMIN SIMANTAB'

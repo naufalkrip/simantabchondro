@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
 import { LoginLayout } from '../../components/login/LoginLayout';
 import { FloatingInput } from '../../components/login/FloatingInput';
@@ -29,15 +29,6 @@ export const MemberLogin: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const savedRole = sessionStorage.getItem('role');
-    const token = sessionStorage.getItem('token');
-    if (token && savedRole === 'member') {
-      navigate('/member/dashboard');
-    }
-    generateCaptcha();
-  }, [navigate]);
-
   const generateCaptcha = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';
@@ -46,6 +37,15 @@ export const MemberLogin: React.FC = () => {
     }
     setCaptchaCode(code);
   };
+
+  useEffect(() => {
+    const savedRole = sessionStorage.getItem('role');
+    const token = sessionStorage.getItem('token');
+    if (token && savedRole === 'member') {
+      navigate('/member/dashboard');
+    }
+    generateCaptcha();
+  }, [navigate]);
 
   const switchToForgot = () => {
     setMode('forgot');

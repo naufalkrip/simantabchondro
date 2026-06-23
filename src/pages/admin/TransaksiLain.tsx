@@ -76,18 +76,6 @@ export const TransaksiLain: React.FC = () => {
     setIsLoading(false);
   };
 
-  useEffect(() => {
-    fetchReports();
-    const unsub = subscribeToDataChange(() => {
-      if (activeReportId) {
-        loadReport(activeReportId);
-      } else {
-        fetchReports();
-      }
-    });
-    return () => unsub();
-  }, []);
-
   // --- Load report detail ---
   const loadReport = async (id: string) => {
     const allReports = await getFinanceReports();
@@ -99,6 +87,19 @@ export const TransaksiLain: React.FC = () => {
       setTransactions(txs);
     }
   };
+
+  useEffect(() => {
+    fetchReports();
+    const unsub = subscribeToDataChange(() => {
+      if (activeReportId) {
+        loadReport(activeReportId);
+      } else {
+        fetchReports();
+      }
+    });
+    return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const goBack = () => {
     setActiveReportId(null);
@@ -128,8 +129,8 @@ export const TransaksiLain: React.FC = () => {
       setNewReportDate(new Date().toISOString().split('T')[0]);
       await fetchReports();
       loadReport(id);
-    } catch (error: any) {
-      toast.error('Gagal membuat laporan: ' + (error?.message || 'Terjadi kesalahan'));
+    } catch (error: unknown) {
+      toast.error('Gagal membuat laporan: ' + ((error as Error)?.message || 'Terjadi kesalahan'));
       console.error('Create Report Error:', error);
     } finally {
       setIsCreating(false);
@@ -145,7 +146,7 @@ export const TransaksiLain: React.FC = () => {
     setRows(prev => prev.filter(r => r.id !== id));
   };
 
-  const updateRow = (id: string, field: keyof RowInput, value: any) => {
+  const updateRow = (id: string, field: keyof RowInput, value: string) => {
     setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
   };
 

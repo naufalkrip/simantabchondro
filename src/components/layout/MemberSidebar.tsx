@@ -6,7 +6,7 @@ import {
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import logo from '../../assets/logo.png';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 
 const menuItems = [
   { path: '/member/dashboard', icon: Home, label: 'Beranda' },

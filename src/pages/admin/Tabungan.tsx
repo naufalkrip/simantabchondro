@@ -115,7 +115,7 @@ export const Tabungan: React.FC = () => {
         }
       });
       toast.success('Riwayat transaksi PDF berhasil diunduh', { id: toastId });
-    } catch (err) {
+    } catch {
       toast.error('Gagal membuat laporan PDF', { id: toastId });
     }
   };
@@ -159,7 +159,7 @@ export const Tabungan: React.FC = () => {
         }
       });
       toast.success('Laporan tabungan PDF berhasil diunduh', { id: toastId });
-    } catch (err) {
+    } catch {
       toast.error('Gagal membuat laporan PDF', { id: toastId });
     }
   };

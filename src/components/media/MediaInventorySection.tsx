@@ -43,7 +43,7 @@ export const MediaInventorySection: React.FC = () => {
   };
 
   const saveMutation = useMutation({
-    mutationFn: (data: any) => editingId ? updateMediaInventory(editingId, data) : addMediaInventory(data),
+    mutationFn: (data: Omit<MediaInventory, 'id' | 'created_at'>) => editingId ? updateMediaInventory(editingId, data) : addMediaInventory(data),
     onSuccess: (res) => {
       if (res.success) {
         queryClient.invalidateQueries({ queryKey: ['media_inventory'] });
@@ -129,7 +129,7 @@ export const MediaInventorySection: React.FC = () => {
           </div>
           <select 
             value={filterCondition} 
-            onChange={e => setFilterCondition(e.target.value as any)}
+            onChange={e => setFilterCondition(e.target.value as 'semua' | 'bagus' | 'jelek')}
             className="px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-white font-medium text-gray-600"
           >
             <option value="semua">Semua Kondisi</option>

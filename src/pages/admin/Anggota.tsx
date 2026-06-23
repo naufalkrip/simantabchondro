@@ -63,7 +63,7 @@ export const Anggota: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    const payload: any = { ...formData };
+    const payload = { ...formData } as Partial<Omit<Member, 'id' | 'totalBalance'>>;
     if (!payload.bankName) delete payload.bankName;
     if (!payload.bankAccountNumber) delete payload.bankAccountNumber;
     if (!payload.bankOwnerName) delete payload.bankOwnerName;
@@ -71,7 +71,7 @@ export const Anggota: React.FC = () => {
     try {
       const res = editingId 
         ? await updateMember(editingId, payload) 
-        : await addMember(payload);
+        : await addMember(payload as Omit<Member, 'id' | 'totalBalance'>);
 
       if (res) {
         setIsModalOpen(false);
@@ -180,7 +180,7 @@ export const Anggota: React.FC = () => {
         }
       });
       toast.success('Laporan PDF berhasil diunduh', { id: toastId });
-    } catch (error) {
+    } catch {
       toast.error('Gagal membuat PDF', { id: toastId });
     }
   };

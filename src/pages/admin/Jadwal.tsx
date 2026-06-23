@@ -33,9 +33,9 @@ export const Jadwal: React.FC = () => {
     queryFn: getSchedules
   });
 
-  const { data: activityCategories = ['Latihan Rutin', 'Tampilan Parade', 'Rapat Pengurus'] } = useQuery({
+  const { data: activityCategories = ['Latihan Rutin', 'Tampilan Parade', 'Rapat Pengurus'] } = useQuery<string[]>({
     queryKey: ['settings', 'activity_categories'],
-    queryFn: () => getSetting('activity_categories').then(res => res || ['Latihan Rutin', 'Tampilan Parade', 'Rapat Pengurus'])
+    queryFn: () => getSetting<string[]>('activity_categories').then(res => res || ['Latihan Rutin', 'Tampilan Parade', 'Rapat Pengurus'])
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -328,7 +328,7 @@ export const Jadwal: React.FC = () => {
                     value={formData.title}
                     onChange={(e) => setFormData({...formData, title: e.target.value})}
                   >
-                    {['latihan', 'rapat', 'tampilan', 'lainnya'].map((cat: any) => (<option key={cat} value={cat}>{cat}</option>))}
+                    {['latihan', 'rapat', 'tampilan', 'lainnya'].map((cat: string) => (<option key={cat} value={cat}>{cat}</option>))}
                   </select>
                 </div>
                 <button 

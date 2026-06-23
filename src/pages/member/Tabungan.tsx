@@ -69,6 +69,7 @@ export const Tabungan: React.FC = () => {
       unsubscribe();
       clearInterval(pollInterval);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberId]);
 
   const handleDepositSubmit = async (e: React.FormEvent) => {

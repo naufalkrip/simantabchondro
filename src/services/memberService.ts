@@ -3,18 +3,18 @@ import type { Member } from '../types/member';
 import type { Transaction } from '../types/transaction';
 import { notifyDataChange } from './refreshService';
 
-const mapMember = (m: any): Member => ({
-  id: m.id,
-  name: m.name,
-  phone: m.phone,
-  joinedDate: m.joined_date || m.created_at || new Date().toISOString(),
-  divisi: m.divisi,
-  totalBalance: m.total_balance || 0,
-  bankOwnerName: m.bank_owner_name,
-  bankAccountNumber: m.bank_account_number,
-  bankName: m.bank_name,
-  username: m.username,
-  password: m.password
+const mapMember = (m: Record<string, unknown>): Member => ({
+  id: m.id as string,
+  name: m.name as string,
+  phone: m.phone as string,
+  joinedDate: (m.joined_date as string) || (m.created_at as string) || new Date().toISOString(),
+  divisi: m.divisi as string,
+  totalBalance: (m.total_balance as number) || 0,
+  bankOwnerName: m.bank_owner_name as string,
+  bankAccountNumber: m.bank_account_number as string,
+  bankName: m.bank_name as string,
+  username: m.username as string,
+  password: m.password as string
 });
 
 export const getMembers = async (): Promise<Member[]> => {
@@ -78,16 +78,16 @@ export const getMembersBankInfo = async (): Promise<Member[]> => {
     return [];
   }
 
-  return (members || []).map((m: any) => ({
-    id: m.id,
-    name: m.name,
+  return (members || []).map((m: Record<string, unknown>) => ({
+    id: m.id as string,
+    name: m.name as string,
     phone: '',
     joinedDate: '',
-    divisi: m.divisi || '',
+    divisi: (m.divisi as string) || '',
     totalBalance: 0,
-    bankOwnerName: m.bank_owner_name,
-    bankAccountNumber: m.bank_account_number,
-    bankName: m.bank_name,
+    bankOwnerName: m.bank_owner_name as string,
+    bankAccountNumber: m.bank_account_number as string,
+    bankName: m.bank_name as string,
     username: '',
     password: '',
   }));
@@ -146,7 +146,7 @@ export const addMember = async (member: Omit<Member, 'id' | 'totalBalance'>): Pr
 
 export const updateMember = async (id: string, updates: Partial<Member>): Promise<boolean> => {
   try {
-    const dbUpdates: any = {};
+    const dbUpdates: Record<string, unknown> = {};
     if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
     if (updates.joinedDate !== undefined) dbUpdates.joined_date = updates.joinedDate;

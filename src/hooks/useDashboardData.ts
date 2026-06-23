@@ -139,6 +139,7 @@ export const useDashboardData = () => {
       days.push({ day: dayName, hadir, total });
     }
     return days;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attendance7Days]);
 
   // Attendance ranking

@@ -93,7 +93,7 @@ export const createFundDistribution = async (
   totalAmount: number,
   description: string,
   recipients: { member_id: string; status: string; amount: number }[]
-): Promise<any> => {
+): Promise<{ id: string }> => {
   try {
     const totalDistributed = recipients.reduce((s, r) => s + r.amount, 0);
 
@@ -191,7 +191,7 @@ export const getFundDistributionDetail = async (id: string): Promise<{
 
     // Look up member names
     const memberIds = [...new Set((recipData || []).map(r => r.member_id))];
-    let memberMap = new Map<string, { name: string; phone: string; divisi: string }>();
+    const memberMap = new Map<string, { name: string; phone: string; divisi: string }>();
 
     if (memberIds.length > 0) {
       const { data: members } = await supabase

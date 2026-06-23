@@ -233,7 +233,7 @@ export const AbsensiRiwayat: React.FC = () => {
                             'bg-red-50 text-red-700 border-red-200 focus:ring-red-500/20 focus:border-red-500'
                           }`}
                           value={editingAttendance[member.id] || 'hadir'}
-                          onChange={(e) => handleStatusChangeEdit(member.id, e.target.value as any)}
+                          onChange={(e) => handleStatusChangeEdit(member.id, e.target.value as 'hadir' | 'tampil' | 'izin' | 'bolos')}
                         >
                           <option value="hadir">Hadir</option>
                           <option value="tampil">Tampil</option>
@@ -263,7 +263,7 @@ export const AbsensiRiwayat: React.FC = () => {
                       'bg-red-50 text-red-700 border-red-200'
                     }`}
                     value={editingAttendance[member.id] || 'hadir'}
-                    onChange={(e) => handleStatusChangeEdit(member.id, e.target.value as any)}
+                    onChange={(e) => handleStatusChangeEdit(member.id, e.target.value as 'hadir' | 'tampil' | 'izin' | 'bolos')}
                   >
                     <option value="hadir">Hadir</option>
                     <option value="tampil">Tampil</option>

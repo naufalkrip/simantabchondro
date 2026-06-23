@@ -1,7 +1,13 @@
 import { supabase } from './supabaseClient';
 import { notifyDataChange } from './refreshService';
 
-export const getSetting = async (key: string): Promise<any> => {
+export interface BankInfo {
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+}
+
+export const getSetting = async <T = unknown>(key: string): Promise<T | null> => {
   const { data, error } = await supabase
     .from('settings')
     .select('value')
@@ -17,7 +23,7 @@ export const getSetting = async (key: string): Promise<any> => {
   return data?.value;
 };
 
-export const updateSetting = async (key: string, value: any): Promise<boolean> => {
+export const updateSetting = async <T = unknown>(key: string, value: T): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from('settings')
