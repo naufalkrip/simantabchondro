@@ -8,6 +8,9 @@ import {
   Info
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { toast } from 'sonner';
+import { exportModernPDF } from '../../utils/pdfExport';
 
 export const Jadwal: React.FC = () => {
   const { data: schedules = [], isLoading } = useQuery({
@@ -17,6 +20,40 @@ export const Jadwal: React.FC = () => {
       return [...data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }
   });
+
+  const handleDownloadPDF = async () => {
+    if (schedules.length === 0) {
+      toast.error('Tidak ada data jadwal untuk didownload');
+      return;
+    }
+
+    const tableData = schedules.map((item, index) => [
+      index + 1,
+      item.title,
+      new Date(item.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+      `${item.time} WIB`,
+      item.location
+    ]);
+
+    const toastId = toast.loading('Membuat laporan PDF...');
+    try {
+      await exportModernPDF({
+        title: 'Jadwal Kegiatan',
+        filename: `Jadwal_Kegiatan_SIMANTAB_${new Date().toISOString().split('T')[0]}`,
+        columns: ['No', 'Nama Kegiatan', 'Tanggal', 'Waktu', 'Lokasi'],
+        data: tableData,
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 30 },
+          2: { cellWidth: 120 },
+          3: { halign: 'center', cellWidth: 60 },
+          4: { cellWidth: 'auto' }
+        }
+      });
+      toast.success('Laporan PDF berhasil diunduh', { id: toastId });
+    } catch {
+      toast.error('Gagal membuat PDF', { id: toastId });
+    }
+  };
 
   const formatMonthYear = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -34,9 +71,19 @@ export const Jadwal: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white px-4 py-3 border-b border-gray-100 rounded-xl shadow-sm">
-        <h2 className="text-xl font-bold text-gray-900">Jadwal Kegiatan</h2>
-        <p className="text-xs text-gray-500 mt-1">Informasi latihan, tampilan, dan agenda MB Chondro</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-white px-4 py-3 border-b border-gray-100 rounded-xl shadow-sm">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Jadwal Kegiatan</h2>
+          <p className="text-xs text-gray-500 mt-1">Informasi latihan, tampilan, dan agenda MB Chondro</p>
+        </div>
+        <Button
+          onClick={handleDownloadPDF}
+          variant="outline"
+          size="sm"
+          className="w-full md:w-auto border-gray-200"
+        >
+          Download PDF
+        </Button>
       </div>
 
       {Object.keys(groupedSchedules).length > 0 ? (

@@ -10,13 +10,14 @@ import {
 } from '../../services/scheduleService';
 import type { Schedule } from '../../services/scheduleService';
 import { 
-  PlusCircle, 
-  Calendar as CalendarIcon, 
-  Clock, 
-  MapPin, 
-  Pencil, 
-  Trash2
+   PlusCircle, 
+   Calendar as CalendarIcon, 
+   Clock, 
+   MapPin, 
+   Pencil, 
+   Trash2
 } from 'lucide-react';
+import { exportModernPDF } from '../../utils/pdfExport';
 
 
 import { toast } from 'sonner';
@@ -152,6 +153,46 @@ export const Jadwal: React.FC = () => {
     });
   };
 
+  const handleDownloadPDF = async () => {
+    if (schedules.length === 0) {
+      toast.error('Tidak ada data jadwal untuk didownload');
+      return;
+    }
+
+    const sortedSchedules = [...schedules].sort((a, b) => {
+      const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
+      if (dateCompare !== 0) return dateCompare;
+      return a.time.localeCompare(b.time);
+    });
+
+    const tableData = sortedSchedules.map((item, index) => [
+      index + 1,
+      item.title,
+      new Date(item.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+      `${item.time} WIB`,
+      item.location
+    ]);
+
+    const toastId = toast.loading('Membuat laporan PDF...');
+    try {
+      await exportModernPDF({
+        title: 'Laporan Jadwal Kegiatan',
+        filename: `Laporan_Jadwal_SIMANTAB_${new Date().toISOString().split('T')[0]}`,
+        columns: ['No', 'Nama Kegiatan', 'Tanggal', 'Waktu', 'Lokasi'],
+        data: tableData,
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 30 },
+          2: { cellWidth: 120 },
+          3: { halign: 'center', cellWidth: 60 },
+          4: { cellWidth: 'auto' }
+        }
+      });
+      toast.success('Laporan PDF berhasil diunduh', { id: toastId });
+    } catch {
+      toast.error('Gagal membuat PDF', { id: toastId });
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       title: activityCategories?.[0] || 'Latihan Rutin',
@@ -182,15 +223,25 @@ export const Jadwal: React.FC = () => {
           <h2 className="text-lg font-semibold text-gray-800 leading-tight">Manajemen Jadwal</h2>
           <p className="text-xs text-gray-500 mt-0.5">Atur kegiatan latihan, tampilan, dan agenda lainnya</p>
         </div>
-        <Button 
-          onClick={() => { resetForm(); setIsModalOpen(true); }} 
-          variant="primary" 
-          size="sm" 
-          className="w-full md:w-auto gap-2"
-          disabled={isLoadingSchedules}
-        >
-          <PlusCircle size={16} /> Tambah Jadwal
-        </Button>
+        <div className="flex gap-2 w-full md:w-auto">
+          <Button 
+            onClick={handleDownloadPDF} 
+            variant="outline" 
+            size="sm" 
+            className="flex-1 md:flex-none border-gray-200"
+          >
+            Download PDF
+          </Button>
+          <Button 
+            onClick={() => { resetForm(); setIsModalOpen(true); }} 
+            variant="primary" 
+            size="sm" 
+            className="flex-1 md:flex-none gap-2"
+            disabled={isLoadingSchedules}
+          >
+            <PlusCircle size={16} /> Tambah Jadwal
+          </Button>
+        </div>
       </div>
 
       {isLoadingSchedules ? (
